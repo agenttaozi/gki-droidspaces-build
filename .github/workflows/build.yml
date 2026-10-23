@@ -1,0 +1,110 @@
+name: Build W210DS GKI (Droidspaces)
+
+on:
+  workflow_dispatch:
+    inputs:
+      SUKISU:
+        description: "注入 SukiSU 保留 root (false 则只编译命名空间内核，不集成 root)"
+        required: true
+        default: "true"
+      KERNEL_COMMIT:
+        description: "GKI 源码提交 (默认对应你设备的 5.15.178 android13-5.15-2025-03_r6)"
+        required: false
+        default: "4ea0fcb5d1308f2f5a5d"
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Install build deps (clang/lld 14, GKI 5.15 支持)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev wget python3 git ccache \
+            clang lld llvm gcc-aarch64-linux-gnu libelf-dev zip curl
+
+      - name: Clone GKI source (GitHub 镜像优先，失败回退 googlesource)
+        run: |
+          set -e
+          git clone --filter=blob:none --no-checkout \
+            https://github.com/KernelSU/kernel_common_mirror common 2>/dev/null || \
+          git clone --filter=blob:none --no-checkout \
+            https://android.googlesource.com/kernel/common common
+          cd common
+          git checkout ${{ github.event.inputs.KERNEL_COMMIT }} || \
+            { git fetch origin ${{ github.event.inputs.KERNEL_COMMIT }} && git checkout FETCH_HEAD; }
+          cd ..
+
+      - name: Integrate SukiSU (optional, 保留 root)
+        if: ${{ github.event.inputs.SUKISU == 'true' }}
+        run: |
+          cd common
+          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -
+          cd ..
+
+      - name: Prepare .config from device base + enable namespaces
+        run: |
+          set -e
+          cp config/w210ds_base.config common/.config
+          cd common
+          # 关闭 GKI 符号白名单（原构建机的路径在本机不存在，否则构建失败）
+          scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
+          scripts/config --disable TRIM_UNUSED_KSYMS || true
+          # 先开 SYSVIPC —— IPC_NS 依赖它（这是设备原配置里 IPC_NS 连选项都没有的根因）
+          scripts/config --enable SYSVIPC
+          # 关 LTO / debug-info 以降低免费 runner 的内存与耗时
+          scripts/config --disable DEBUG_INFO || true
+          scripts/config --disable LTO_CLANG_THIN || true
+          scripts/config --disable LTO_CLANG || true
+          scripts/config --enable LTO_NONE || true
+          make LLVM=1 ARCH=arm64 olddefconfig
+          # 再开 Droidspaces 需要的其余命名空间 / cgroup / 网络选项
+          scripts/config --enable PID_NS --enable IPC_NS --enable USER_NS \
+            --enable DEVTMPFS --enable MACVLAN --enable CGROUP_PIDS \
+            --enable CFS_BANDWIDTH --enable IP6_NF_NAT --enable IP6_NF_TARGET_MASQUERADE \
+            --enable IKCONFIG --enable IKCONFIG_PROC
+          # 注入 SukiSU 后开启 KSU（若未注入则忽略）
+          if scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
+          make LLVM=1 ARCH=arm64 olddefconfig
+          cd ..
+          echo "=== 校验关键配置（应为 =y） ==="
+          for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU; do
+            v=$(grep -E "^CONFIG_${k}=" common/.config | head -1)
+            echo "$k -> ${v:-NOT_FOUND}"
+          done
+
+      - name: Build uncompressed Image (LLVM=1)
+        run: |
+          set -e
+          cd common
+          make LLVM=1 ARCH=arm64 -j"$(nproc)" Image
+          ls -la arch/arm64/boot/Image
+          cd ..
+
+      - name: Locate boot_a.bin (asset or download)
+        run: |
+          BOOT=assets/boot_a.bin
+          if [ ! -f "$BOOT" ]; then
+            if [ -z "${{ secrets.BOOT_URL }}" ]; then
+              echo "ERROR: 既无 assets/boot_a.bin 也无 BOOT_URL secret"; exit 1
+            fi
+            mkdir -p assets
+            curl -L "${{ secrets.BOOT_URL }}" -o "$BOOT"
+          fi
+          echo "BOOT=$BOOT" >> "$GITHUB_ENV"
+          echo "KERNEL=common/arch/arm64/boot/Image" >> "$GITHUB_ENV"
+
+      - name: Repack boot image (byte-level kernel swap)
+        run: |
+          set -e
+          python3 scripts/repack.py "$BOOT" "$KERNEL" boot_a_droidspaces.img
+          ls -la boot_a_droidspaces.img
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot_a_droidspaces.img
+          path: boot_a_droidspaces.img
