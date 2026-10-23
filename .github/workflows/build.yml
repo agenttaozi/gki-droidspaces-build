@@ -38,7 +38,7 @@ jobs:
           # 该目录在最新提交里已被 “Remove unused clang-r450784e” 删除，
           # 因此要找【仍包含该目录且含 bin/clang】的最近提交
           CMT=""
-          for c in $(git rev-list --all -- "$CLANG_VER"); do
+          for c in $(git rev-list HEAD -- "$CLANG_VER"); do
             if git cat-file -e "$c:$CLANG_VER/bin/clang" 2>/dev/null; then
               CMT=$c; break
             fi
