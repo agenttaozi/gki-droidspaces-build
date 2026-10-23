@@ -31,31 +31,39 @@ jobs:
           set -e
           CLANG_VER=clang-r450784e
           WS="$PWD"
-          rm -rf clang-git clang-extract
-          # 关键：tree:0 部分克隆只拉 commit 对象（秒级），不拉 trees/blobs，
-          # 之后仅按需导出 clang-r450784e 这一个目录，避开整库（含几十个 clang 版本）的缓慢拉取
-          echo ">>> partial clone (commits only, tree:0) — fast"
+          rm -rf clang-git clang-extract clang.tar.gz
+          # 先秒级拿到“仍含该目录”的目标提交（tree:0 只拉 commit，不拉 trees/blobs）
+          echo ">>> 取目标提交 (tree:0 部分克隆, 秒级)"
           git clone --filter=tree:0 --no-checkout \
-            https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang-git
-          cd clang-git
-          # 该目录在最新提交里已被 “Remove unused clang-r450784e” 删除，
-          # 按提交信息定位删除提交（只扫 commit 信息，不需要 trees）
-          REMOVE=$(git log --all --grep="Remove unused clang-r450784e" --format=%H | head -1)
-          if [ -z "$REMOVE" ]; then
-            REMOVE=$(git log --all --format=%H -- "$CLANG_VER" | head -1)
+            https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang-git >/dev/null 2>&1 || true
+          CMT=$(cd clang-git && git rev-parse "$(git log --all --grep='Remove unused clang-r450784e' --format=%H | head -1)^")
+          if [ -z "$CMT" ]; then
+            CMT=$(cd clang-git && git rev-parse "$(git log --all --format=%H -- "$CLANG_VER" | head -1)^")
           fi
-          echo "removal commit: ${REMOVE:0:12}"
-          # 其父提交仍包含该目录
-          CMT=$(git rev-parse "$REMOVE"^)
-          echo "target commit (dir present): ${CMT:0:12}"
-          cd "$WS"
-          echo ">>> 仅导出 $CLANG_VER 目录（按需拉取该子树，不拉整库）"
+          rm -rf clang-git
+          echo "target commit: ${CMT:0:12}"
+          # 方法1：googlesource +archive 直下该目录（最快，免克隆整库）
+          echo ">>> 方法1: +archive 直下 $CLANG_VER"
           mkdir -p clang-extract
-          ( cd clang-git && git archive "$CMT" "$CLANG_VER" ) | tar -x -f - -C clang-extract || true
+          if curl -fSL --retry 6 --retry-delay 5 --max-time 600 -o clang.tar.gz \
+               "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/$CMT/clang-r450784e.tar.gz" 2>/dev/null; then
+            if tar tzf clang.tar.gz >/dev/null 2>&1; then
+              tar xf clang.tar.gz -C clang-extract
+            else
+              echo "  +archive 返回非 tar 内容，放弃"
+            fi
+          else
+            echo "  +archive 下载失败，回退方法2"
+          fi
           CB=$(find "$WS/clang-extract/$CLANG_VER" -path '*/bin/clang' -type f 2>/dev/null | head -1)
+          # 方法2：blob:none 克隆（目录树在本地）+ checkout 指定路径（二进制按需拉取）
           if [ ! -x "$CB" ]; then
-            echo "archive 方式未拿到，回退 checkout 方式（按需 fetch 子树）"
-            ( cd clang-git && git checkout "$CMT" -- "$CLANG_VER" )
+            echo ">>> 方法2: blob:none 克隆 + checkout 路径"
+            rm -rf clang-extract clang.tar.gz
+            git clone --filter=blob:none --no-checkout \
+              https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang-git
+            CMT2=$(cd clang-git && git rev-parse "$(git log --all --grep='Remove unused clang-r450784e' --format=%H | head -1)^")
+            git -C clang-git checkout "$CMT2" -- "$CLANG_VER"
             CB=$(find "$WS/clang-git/$CLANG_VER" -path '*/bin/clang' -type f 2>/dev/null | head -1)
           fi
           if [ ! -x "$CB" ]; then
