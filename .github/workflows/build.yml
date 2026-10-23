@@ -20,54 +20,23 @@ jobs:
       - name: Checkout this repo
         uses: actions/checkout@v4
 
-      - name: Install build deps (GKI 5.15 支持；clang 用 NDK 自带的，不装 apt 的)
+      - name: Install build deps (GKI 5.15 支持；使用 apt 的 clang-14)
         run: |
           sudo apt-get update
           sudo apt-get install -y bc bison flex libssl-dev wget python3 git ccache \
-            gcc-aarch64-linux-gnu libelf-dev zip curl pkg-config
+            gcc-aarch64-linux-gnu libelf-dev zip curl pkg-config clang-14 lld-14
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
+          # 让后续所有步骤的 make 都能找到 clang-14 / ld.lld-14（系统无默认 clang 命令）
+          echo "PATH=/usr/lib/llvm-14/bin:$PATH" >> "$GITHUB_ENV"
 
-      - name: Download clang 14.0.7 (r450784e) via Android NDK —— 精确匹配原厂 .ko 的 vermagic 编译器串
+      - name: Compiler = clang-14 (apt) —— 关键在 UTS_RELEASE 精确匹配原厂，编译器小版本不影响模块 vermagic
         run: |
           set -e
-          # 原厂 .ko 的 vermagic 编译器串为：
-          #   Android (8508608, based on r450784e) clang version 14.0.7 (...)
-          # 这正是 Android NDK r25 系列自带的 clang（公开、CI 从 GitHub 拉取极快、版本串精确一致）。
-          # 注意：googlesource 的 prebuilts/clang 部分克隆无法按需提供历史目录树，故不走 git。
-          EXPECT="Android (8508608, based on r450784e) clang version 14.0.7"
-          NDK_DIR=""
-          for NV in r25c r25b r25; do
-            echo ">>> try NDK $NV"
-            rm -rf ndk.zip android-ndk-*
-            if ! curl -fSL --retry 6 --retry-delay 5 --max-time 900 -o ndk.zip \
-                 "https://github.com/android/ndk/releases/download/$NV/android-ndk-$NV-linux.zip" 2>/dev/null; then
-              echo "  download failed for $NV"; continue
-            fi
-            unzip -q ndk.zip
-            rm -f ndk.zip
-            D=$(find "$PWD" -maxdepth 1 -type d -name 'android-ndk-*' | head -1)
-            CLANG="$D/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
-            if [ ! -x "$CLANG" ]; then echo "  no clang in $NV"; continue; fi
-            VER=$("$CLANG" --version | head -1)
-            echo ">>> $NV clang: $VER"
-            if echo "$VER" | grep -qF "$EXPECT"; then
-              NDK_DIR="$D"; echo "MATCH at $NV"; break
-            else
-              echo "  version 不匹配，尝试下一个"
-            fi
-          done
-          if [ -z "$NDK_DIR" ]; then
-            echo "ERROR: 没有匹配的 NDK clang（需精确匹配 '$EXPECT'）"; exit 1
-          fi
-          # 只保留 llvm 工具链目录，删掉 NDK 其余部分（约 2.5GB）以省免费 runner 磁盘
-          LLVM="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64"
-          mv "$LLVM" /tmp/llvm-clang
-          rm -rf "$NDK_DIR"
-          CLANG_DIR=/tmp/llvm-clang
-          echo ">>> CLANG_DIR=$CLANG_DIR"
-          "$CLANG_DIR/bin/clang" --version
-          echo "CLANG_DIR=$CLANG_DIR" >> "$GITHUB_ENV"
+          clang-14 --version | head -1
+          ld.lld-14 --version | head -1
+          echo "CLANG_CC=clang-14" >> "$GITHUB_ENV"
+          echo "CLANG_LD=ld.lld-14" >> "$GITHUB_ENV"
 
       - name: Clone GKI source (GitHub 镜像优先，失败回退 googlesource)
         run: |
@@ -102,12 +71,17 @@ jobs:
           scripts/config --enable LD_IS_LLD
           sed -i -E 's/^CONFIG_LTO_CLANG_THIN=.*/# CONFIG_LTO_CLANG_THIN is not set/; s/^CONFIG_LTO_CLANG_FULL=.*/# CONFIG_LTO_CLANG_FULL is not set/; s/^CONFIG_LTO_CLANG=.*/# CONFIG_LTO_CLANG is not set/; s/^CONFIG_LTO_NONE=.*/# CONFIG_LTO_NONE is not set/' .config
           printf 'CONFIG_LTO_NONE=y\n' >> .config
-          make LLVM=1 ARCH=arm64 olddefconfig
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
           if grep -qE '^CONFIG_LTO_CLANG_THIN=y|^CONFIG_LTO_CLANG_FULL=y' .config; then
             echo "ERROR: LTO 仍未关闭"; grep -E 'CONFIG_LTO' .config; exit 1
           fi
-          # === 关键：让内核 vermagic 精确匹配原厂 .ko 模块 ===
-          # 模块 vermagic = 5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925 ... clang 14.0.7 (r450784e)
+          # === 关键：让内核 vermagic（UTS_RELEASE）精确匹配原厂 .ko 模块 ===
+          # 模块 vermagic = 5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925
+          # GKI 源码 Makefile 自带 EXTRAVERSION=-android13-8-g4ea0fcb5d130，若不清空，
+          # UTS_RELEASE 会变成 ...-g4ea0fcb5d130-android13-8-gb370d3baf5b7-...（多出一段 git sha），
+          # 与原厂模块不匹配 → 模块加载失败 → init 崩溃（这正是 Build 2 的崩溃根因）。
+          sed -i -E 's/^EXTRAVERSION[[:space:]]*=.*/EXTRAVERSION =/' common/Makefile
+          grep -E '^EXTRAVERSION' common/Makefile
           scripts/config --disable LOCALVERSION_AUTO
           scripts/config --set-str LOCALVERSION "-android13-8-gb370d3baf5b7-ab20251103.222925"
           # 再开 Droidspaces 需要的其余命名空间 / cgroup / 网络选项
@@ -116,7 +90,7 @@ jobs:
             --enable CFS_BANDWIDTH --enable IP6_NF_NAT --enable IP6_NF_TARGET_MASQUERADE \
             --enable IKCONFIG --enable IKCONFIG_PROC
           if scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
-          make LLVM=1 ARCH=arm64 olddefconfig
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
           cd ..
           echo "=== 校验关键配置（应为 =y） ==="
           for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_NONE; do
@@ -124,15 +98,15 @@ jobs:
             echo "$k -> ${v:-NOT_FOUND}"
           done
 
-      - name: Build uncompressed Image (用 AOSP clang-r450784e)
+      - name: Build uncompressed Image (clang-14)
         run: |
           set -e
-          export PATH="${{ env.CLANG_DIR }}/bin:$PATH"
+          export PATH="/usr/lib/llvm-14/bin:$PATH"
           cd common
-          make LLVM=1 ARCH=arm64 -j"$(nproc)" Image
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 -j"$(nproc)" Image
           ls -la arch/arm64/boot/Image
-          echo "=== 校验产物 vermagic 前缀是否匹配原厂模块 ==="
-          strings arch/arm64/boot/Image | grep -m1 "5.15.178-android13-8-gb370d3baf5b7" || echo "WARN: vermagic 前缀未匹配，请检查 LOCALVERSION"
+          echo "=== 校验产物 vermagic 是否精确匹配原厂模块 ==="
+          strings arch/arm64/boot/Image | grep -m1 "5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925" || echo "WARN: vermagic 未匹配，请检查 EXTRAVERSION/LOCALVERSION"
           cd ..
 
       - name: Locate boot_a.bin (asset or download)
