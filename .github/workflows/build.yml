@@ -155,3 +155,20 @@ jobs:
         with:
           name: boot_a_droidspaces.img
           path: boot_a_droidspaces.img
+
+      - name: Publish boot img to GitHub Release (永久下载链接，回家电脑可直接下载)
+        if: success()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG=w210ds-latest
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" -y 2>/dev/null || true
+          git -C "$GITHUB_WORKSPACE" push --delete origin "$TAG" 2>/dev/null || true
+          gh release create "$TAG" boot_a_droidspaces.img \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "W210DS Droidspaces boot (latest)" \
+            --notes "内核已补 PID_NS/IPC_NS/SYSVIPC/USER_NS 等命名空间，关闭 MODVERSIONS，vermagic 精确匹配原厂模块。刷入前请确认设备处于 A/B 安全槽（boot_a）。"
+          echo "RELEASE_URL=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/boot_a_droidspaces.img" >> "$GITHUB_ENV"
+          echo "成品下载地址: $RELEASE_URL"
