@@ -52,15 +52,21 @@ jobs:
           cd common
           # 关闭 GKI 符号白名单（原构建机的路径在本机不存在，否则构建失败）
           scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
-          scripts/config --disable TRIM_UNUSED_KSYMS || true
+          scripts/config --disable TRIM_UNUSED_KSYMS
           # 先开 SYSVIPC —— IPC_NS 依赖它（这是设备原配置里 IPC_NS 连选项都没有的根因）
           scripts/config --enable SYSVIPC
-          # 关 LTO / debug-info 以降低免费 runner 的内存与耗时
-          scripts/config --disable DEBUG_INFO || true
-          scripts/config --disable LTO_CLANG_THIN || true
-          scripts/config --disable LTO_CLANG || true
-          scripts/config --enable LTO_NONE || true
+          # 关 DEBUG_INFO / 强制 LTO=NONE：免费 runner 只有 7GB 内存，LTO 链接会 OOM 被杀
+          scripts/config --disable DEBUG_INFO
+          scripts/config --enable LD_IS_LLD
+          # 用 sed 强制把 choice 里的 LTO 选项写成 NONE（scripts/config --disable 会被 olddefconfig 的默认值覆盖回来）
+          sed -i -E 's/^CONFIG_LTO_CLANG_THIN=.*/# CONFIG_LTO_CLANG_THIN is not set/; s/^CONFIG_LTO_CLANG_FULL=.*/# CONFIG_LTO_CLANG_FULL is not set/; s/^CONFIG_LTO_CLANG=.*/# CONFIG_LTO_CLANG is not set/; s/^CONFIG_LTO_NONE=.*/# CONFIG_LTO_NONE is not set/' .config
+          printf 'CONFIG_LTO_NONE=y\n' >> .config
           make LLVM=1 ARCH=arm64 olddefconfig
+          # 校验 LTO 已彻底关闭，否则直接失败，避免再次空跑 20 分钟
+          if grep -qE '^CONFIG_LTO_CLANG_THIN=y|^CONFIG_LTO_CLANG_FULL=y' .config; then
+            echo "ERROR: LTO 仍未关闭，当前 LTO 配置："; grep -E 'CONFIG_LTO' .config; exit 1
+          fi
+          echo "LTO 状态："; grep -E 'CONFIG_LTO' .config
           # 再开 Droidspaces 需要的其余命名空间 / cgroup / 网络选项
           scripts/config --enable PID_NS --enable IPC_NS --enable USER_NS \
             --enable DEVTMPFS --enable MACVLAN --enable CGROUP_PIDS \
