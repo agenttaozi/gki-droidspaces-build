@@ -60,7 +60,8 @@ jobs:
       - name: Prepare .config from device base + enable namespaces + 匹配原厂 vermagic
         run: |
           set -e
-          cp config/w210ds_base.config common/.config
+          # 用【完整原厂 .config】作基底（6958 行，含全部选项，确保 module_layout CRC 与原厂内核一致）
+          cp config/w210ds_full.config common/.config
           cd common
           scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
           scripts/config --disable TRIM_UNUSED_KSYMS
@@ -96,14 +97,24 @@ jobs:
             --enable DEVTMPFS --enable MACVLAN --enable CGROUP_PIDS \
             --enable CFS_BANDWIDTH --enable IP6_NF_NAT --enable IP6_NF_TARGET_MASQUERADE \
             --enable IKCONFIG --enable IKCONFIG_PROC
+          # === 关键修复：关闭 MODVERSIONS ===
+          # 原厂 .ko 是用原厂内核配置编译的，其 module_layout CRC 依赖原厂完整配置。
+          # 我们基于完整原厂配置只做【增量】改动（加命名空间），但为彻底避免 CRC 不匹配
+          # 导致原厂模块全部拒绝加载、存储栈起不来（上一版即此原因崩溃），直接关闭
+          # CONFIG_MODVERSIONS，让内核跳过 module_layout CRC 校验加载原厂模块。
+          # 加命名空间是纯增量（只在 nsproxy 里加字段，原厂模块不触碰这些新字段），ABI 仍兼容。
+          scripts/config --disable MODVERSIONS
           if scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
           cd ..
-          echo "=== 校验关键配置（应为 =y） ==="
-          for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_NONE; do
+          echo "=== 校验关键配置（PID_NS/IPC_NS/SYSVIPC= y；MODVERSIONS= 应为 not set）==="
+          for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_NONE MODVERSIONS; do
             v=$(grep -E "^CONFIG_${k}=" common/.config | head -1)
-            echo "$k -> ${v:-NOT_FOUND}"
+            echo "$k -> ${v:-NOT_SET}"
           done
+          if grep -qE '^CONFIG_MODVERSIONS=y' common/.config; then
+            echo "ERROR: MODVERSIONS 未关闭，原厂模块将 CRC 校验失败"; exit 1
+          fi
 
       - name: Build uncompressed Image (clang-14)
         run: |
