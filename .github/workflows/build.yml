@@ -35,14 +35,21 @@ jobs:
           git clone --filter=blob:none --no-checkout \
             https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang-git
           cd clang-git
-          CMT=$(git log --all --format=%H -1 -- "$CLANG_VER" 2>/dev/null || true)
+          # 该目录在最新提交里已被 “Remove unused clang-r450784e” 删除，
+          # 因此要找【仍包含该目录且含 bin/clang】的最近提交
+          CMT=""
+          for c in $(git rev-list --all -- "$CLANG_VER"); do
+            if git cat-file -e "$c:$CLANG_VER/bin/clang" 2>/dev/null; then
+              CMT=$c; break
+            fi
+          done
           if [ -z "$CMT" ]; then
-            echo "ERROR: 仓库历史中找不到 $CLANG_VER"; exit 1
+            echo "ERROR: 找不到仍含 $CLANG_VER/bin/clang 的提交"; exit 1
           fi
-          echo ">>> $CLANG_VER 最后出现于 $CMT"
+          echo ">>> 选用提交 $CMT（仍含 $CLANG_VER）"
           git sparse-checkout init --cone
           git sparse-checkout set "$CLANG_VER"
-          git checkout "$CMT"
+          git checkout "$CMT" -- "$CLANG_VER"
           cd ..
           CB=$(find "$PWD/clang-git/$CLANG_VER" -path '*/bin/clang' -type f 2>/dev/null | head -1)
           if [ ! -x "$CB" ]; then
