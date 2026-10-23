@@ -30,24 +30,29 @@ jobs:
         run: |
           set -e
           CLANG_VER=r450784e
-          CLANG_DIR="$PWD/clang-$CLANG_VER"
+          CLANG_ROOT="$PWD/clang-prebuilt"
+          rm -rf "$CLANG_ROOT"; mkdir -p "$CLANG_ROOT"
           for REF in master main android13-5.15; do
             echo ">>> try ref: $REF"
             if curl -sSL --max-time 180 -o clang.tar.gz \
               "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/$REF/clang-$CLANG_VER.tar.gz"; then
               if tar tzf clang.tar.gz >/dev/null 2>&1; then
-                mkdir -p "$CLANG_DIR"
-                tar xf clang.tar.gz -C "$CLANG_DIR"
-                echo "downloaded from ref=$REF"
-                break
+                tar xf clang.tar.gz -C "$CLANG_ROOT"
+                # +archive 包内顶层目录为 clang-r450784e/，自动定位真正的 clang 二进制
+                CLANG_BIN=$(find "$CLANG_ROOT" -path '*/bin/clang' -type f | head -1)
+                if [ -x "$CLANG_BIN" ]; then
+                  CLANG_DIR=$(dirname "$CLANG_BIN")
+                  echo "found clang at $CLANG_BIN (ref=$REF)"
+                  break
+                fi
               fi
             fi
-            echo "ref $REF failed, retry next"
+            echo "ref $REF 不可用，尝试下一个"
           done
-          if [ ! -x "$CLANG_DIR/bin/clang" ]; then
-            echo "ERROR: clang-$CLANG_VER 下载失败"; exit 1
+          if [ -z "${CLANG_DIR:-}" ] || [ ! -x "$CLANG_DIR/clang" ]; then
+            echo "ERROR: clang-$CLANG_VER 下载/解压失败"; exit 1
           fi
-          "$CLANG_DIR/bin/clang" --version
+          "$CLANG_DIR/clang" --version
           echo "CLANG_DIR=$CLANG_DIR" >> "$GITHUB_ENV"
 
       - name: Clone GKI source (GitHub 镜像优先，失败回退 googlesource)
