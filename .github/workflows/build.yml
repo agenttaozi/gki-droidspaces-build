@@ -20,62 +20,52 @@ jobs:
       - name: Checkout this repo
         uses: actions/checkout@v4
 
-      - name: Install build deps (GKI 5.15 支持；clang 用 AOSP 预编译版，不装 apt 的)
+      - name: Install build deps (GKI 5.15 支持；clang 用 NDK 自带的，不装 apt 的)
         run: |
           sudo apt-get update
           sudo apt-get install -y bc bison flex libssl-dev wget python3 git ccache \
             gcc-aarch64-linux-gnu libelf-dev zip curl pkg-config
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
 
-      - name: Download AOSP clang-r450784e (clang 14.0.7) —— 精确匹配原厂 .ko 的 vermagic 编译器串
+      - name: Download clang 14.0.7 (r450784e) via Android NDK —— 精确匹配原厂 .ko 的 vermagic 编译器串
         run: |
           set -e
-          CLANG_VER=clang-r450784e
-          WS="$PWD"
-          rm -rf clang-git clang-extract clang.tar.gz
-          # 先秒级拿到“仍含该目录”的目标提交（tree:0 只拉 commit，不拉 trees/blobs）
-          echo ">>> 取目标提交 (tree:0 部分克隆, 秒级)"
-          git clone --filter=tree:0 --no-checkout \
-            https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang-git >/dev/null 2>&1 || true
-          CMT=$(cd clang-git && git rev-parse "$(git log --all --grep='Remove unused clang-r450784e' --format=%H | head -1)^")
-          if [ -z "$CMT" ]; then
-            CMT=$(cd clang-git && git rev-parse "$(git log --all --format=%H -- "$CLANG_VER" | head -1)^")
-          fi
-          rm -rf clang-git
-          echo "target commit: ${CMT:0:12}"
-          # 方法1：googlesource +archive 直下该目录（最快，免克隆整库）
-          echo ">>> 方法1: +archive 直下 $CLANG_VER"
-          mkdir -p clang-extract
-          if curl -fSL --retry 6 --retry-delay 5 --max-time 600 -o clang.tar.gz \
-               "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/$CMT/clang-r450784e.tar.gz" 2>/dev/null; then
-            if tar tzf clang.tar.gz >/dev/null 2>&1; then
-              tar xf clang.tar.gz -C clang-extract
-            else
-              echo "  +archive 返回非 tar 内容，放弃"
+          # 原厂 .ko 的 vermagic 编译器串为：
+          #   Android (8508608, based on r450784e) clang version 14.0.7 (...)
+          # 这正是 Android NDK r25 系列自带的 clang（公开、CI 从 GitHub 拉取极快、版本串精确一致）。
+          # 注意：googlesource 的 prebuilts/clang 部分克隆无法按需提供历史目录树，故不走 git。
+          EXPECT="Android (8508608, based on r450784e) clang version 14.0.7"
+          NDK_DIR=""
+          for NV in r25c r25b r25; do
+            echo ">>> try NDK $NV"
+            rm -rf ndk.zip android-ndk-*
+            if ! curl -fSL --retry 6 --retry-delay 5 --max-time 900 -o ndk.zip \
+                 "https://github.com/android/ndk/releases/download/$NV/android-ndk-$NV-linux.zip" 2>/dev/null; then
+              echo "  download failed for $NV"; continue
             fi
-          else
-            echo "  +archive 下载失败，回退方法2"
+            unzip -q ndk.zip
+            rm -f ndk.zip
+            D=$(find "$PWD" -maxdepth 1 -type d -name 'android-ndk-*' | head -1)
+            CLANG="$D/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+            if [ ! -x "$CLANG" ]; then echo "  no clang in $NV"; continue; fi
+            VER=$("$CLANG" --version | head -1)
+            echo ">>> $NV clang: $VER"
+            if echo "$VER" | grep -qF "$EXPECT"; then
+              NDK_DIR="$D"; echo "MATCH at $NV"; break
+            else
+              echo "  version 不匹配，尝试下一个"
+            fi
+          done
+          if [ -z "$NDK_DIR" ]; then
+            echo "ERROR: 没有匹配的 NDK clang（需精确匹配 '$EXPECT'）"; exit 1
           fi
-          CB=$(find "$WS/clang-extract/$CLANG_VER" -path '*/bin/clang' -type f 2>/dev/null | head -1)
-          # 方法2：blob:none 克隆（目录树在本地）+ checkout 指定路径（二进制按需拉取）
-          if [ ! -x "$CB" ]; then
-            echo ">>> 方法2: blob:none 克隆 + checkout 路径"
-            rm -rf clang-extract clang.tar.gz
-            git clone --filter=blob:none --no-checkout \
-              https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang-git
-            CMT2=$(cd clang-git && git rev-parse "$(git log --all --grep='Remove unused clang-r450784e' --format=%H | head -1)^")
-            git -C clang-git checkout "$CMT2" -- "$CLANG_VER"
-            CB=$(find "$WS/clang-git/$CLANG_VER" -path '*/bin/clang' -type f 2>/dev/null | head -1)
-          fi
-          if [ ! -x "$CB" ]; then
-            echo "ERROR: 未找到 clang 二进制"; exit 1
-          fi
-          CLANG_DIR=$(dirname "$(dirname "$CB")")
-          echo ">>> clang dir: $CLANG_DIR"
-          VER=$("$CLANG_DIR/bin/clang" --version | head -1)
-          echo ">>> clang: $VER"
-          if ! echo "$VER" | grep -q "r450784e"; then
-            echo "ERROR: clang 版本串不含 r450784e，vermagic 必不匹配"; exit 1
-          fi
+          # 只保留 llvm 工具链目录，删掉 NDK 其余部分（约 2.5GB）以省免费 runner 磁盘
+          LLVM="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64"
+          mv "$LLVM" /tmp/llvm-clang
+          rm -rf "$NDK_DIR"
+          CLANG_DIR=/tmp/llvm-clang
+          echo ">>> CLANG_DIR=$CLANG_DIR"
           "$CLANG_DIR/bin/clang" --version
           echo "CLANG_DIR=$CLANG_DIR" >> "$GITHUB_ENV"
 
