@@ -119,7 +119,32 @@ jobs:
           # 注：加命名空间(PID_NS/IPC_NS/USER_NS)不改动 nsproxy/task_struct 布局，
           # 与原厂 .ko 所依赖的那些导出符号 CRC 一致，故能正常加载。
           if scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
+
+          # === 去掉 UTS_RELEASE 尾部的 dirty 标记 "+" （双保险）===
+          # 现象：SukiSU 补丁 + 改过的 Makefile 让 git 工作树变脏，scripts/setlocalversion
+          # 会给 UTS_RELEASE 追加一个 "+"，变成 ...ab13530115+ ，而原厂 .ko 的 vermagic 没有这个 "+"。
+          # vermagic 是整串 strcmp，多一个字符就全部拒绝加载 -> 存储栈起不来 -> 照样 panic。
+          # 保险①：提交全部本地修改，让 git diff-index 干净；
+          # 保险②：放一个空的 .scmversion，直接短路 scripts/setlocalversion（不再追加 -g<sha>/+ ）。
+          git config --global --add safe.directory "$PWD" || true
+          git config user.email buildbot@example.com || true
+          git config user.name buildbot || true
+          git add -A >/dev/null 2>&1 || true
+          git commit -q -m "SukiSU + Droidspaces namespaces config" >/dev/null 2>&1 || echo "(no changes to commit)"
+          touch .scmversion
+
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
+
+          # === 秒级预检：UTS_RELEASE 必须【逐个符号】等于原厂真串，否则立刻失败，避免白编译 45 分钟 ===
+          KR=$(cat include/config/kernel.release 2>/dev/null || true)
+          TARGET="5.15.178-android13-8-00012-g4ea0fcb5d130-ab13530115"
+          echo "UTS_RELEASE(preflight) = [$KR]"
+          echo "TARGET                 = [$TARGET]"
+          if [ "$KR" != "$TARGET" ]; then
+            echo "ERROR: UTS_RELEASE 不等于目标串（多余的 '$+' 或 '-g<sha>' 都会让原厂 .ko 拒绝加载）"
+            exit 1
+          fi
+          echo "UTS_RELEASE preflight OK"
           cd ..
           echo "=== 校验关键配置（PID_NS/IPC_NS/SYSVIPC/USER_NS=y；MODVERSIONS 必须仍为 y）==="
           for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_NONE MODVERSIONS MODULE_UNLOAD SMP PREEMPT; do
