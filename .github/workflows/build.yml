@@ -26,33 +26,46 @@ jobs:
           sudo apt-get install -y bc bison flex libssl-dev wget python3 git ccache \
             gcc-aarch64-linux-gnu libelf-dev zip curl pkg-config
 
-      - name: Download AOSP clang-r450784e (clang 14.0.7) —— 必须精确匹配原厂 .ko 的 vermagic 编译器串
+      - name: Download AOSP clang-r450784e (clang 14.0.7) —— 精确匹配原厂 .ko 的 vermagic 编译器串
         run: |
           set -e
           CLANG_VER=r450784e
-          CLANG_ROOT="$PWD/clang-prebuilt"
-          rm -rf "$CLANG_ROOT"; mkdir -p "$CLANG_ROOT"
-          for REF in master main android13-5.15; do
-            echo ">>> try ref: $REF"
-            if curl -sSL --max-time 180 -o clang.tar.gz \
-              "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/$REF/clang-$CLANG_VER.tar.gz"; then
-              if tar tzf clang.tar.gz >/dev/null 2>&1; then
-                tar xf clang.tar.gz -C "$CLANG_ROOT"
-                # +archive 包内顶层目录为 clang-r450784e/，自动定位真正的 clang 二进制
-                CLANG_BIN=$(find "$CLANG_ROOT" -path '*/bin/clang' -type f | head -1)
-                if [ -x "$CLANG_BIN" ]; then
-                  CLANG_DIR=$(dirname "$CLANG_BIN")
-                  echo "found clang at $CLANG_BIN (ref=$REF)"
-                  break
+          CLANG_DIR=""
+          # 方案1：git sparse-clone 只拉取 clang-r450784e 目录（避开 +archive 偶发 502，且可断点续传）
+          echo ">>> 尝试 git sparse-clone (googlesource)"
+          rm -rf clang-git
+          if git clone --filter=blob:none --no-checkout \
+                https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang-git 2>&1 | tail -5; then
+            ( cd clang-git && git sparse-checkout init --cone && git sparse-checkout set "$CLANG_VER" && git checkout ) || true
+            CB=$(find "$PWD/clang-git/$CLANG_VER" -path '*/bin/clang' -type f 2>/dev/null | head -1)
+            if [ -x "$CB" ]; then CLANG_DIR=$(dirname "$(dirname "$CB")"); fi
+          fi
+          # 方案2：回退到 +archive tarball（带重试、更长超时）
+          if [ -z "$CLANG_DIR" ]; then
+            echo ">>> sparse-clone 失败，回退 tarball"
+            rm -rf clang-prebuilt; mkdir -p clang-prebuilt
+            for REF in master main android13-5.15; do
+              echo "  try ref=$REF"
+              if curl -fSL --retry 6 --retry-delay 5 --retry-all-errors --max-time 600 -o clang.tar.gz \
+                    "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/$REF/clang-$CLANG_VER.tar.gz"; then
+                if tar tzf clang.tar.gz >/dev/null 2>&1; then
+                  tar xf clang.tar.gz -C clang-prebuilt
+                  CB=$(find "$PWD/clang-prebuilt" -path '*/bin/clang' -type f | head -1)
+                  if [ -x "$CB" ]; then CLANG_DIR=$(dirname "$(dirname "$CB")"); break; fi
                 fi
               fi
-            fi
-            echo "ref $REF 不可用，尝试下一个"
-          done
-          if [ -z "${CLANG_DIR:-}" ] || [ ! -x "$CLANG_DIR/clang" ]; then
-            echo "ERROR: clang-$CLANG_VER 下载/解压失败"; exit 1
+              echo "  ref $REF 不可用，尝试下一个"
+            done
           fi
-          "$CLANG_DIR/clang" --version
+          if [ -z "$CLANG_DIR" ] || [ ! -x "$CLANG_DIR/bin/clang" ]; then
+            echo "ERROR: clang-$CLANG_VER 下载/校验失败"; exit 1
+          fi
+          VER=$("$CLANG_DIR/bin/clang" --version | head -1)
+          echo ">>> clang: $VER"
+          if ! echo "$VER" | grep -q "$CLANG_VER"; then
+            echo "WARN: 版本串未含 $CLANG_VER，vermagic 可能不匹配（仍继续）"
+          fi
+          "$CLANG_DIR/bin/clang" --version
           echo "CLANG_DIR=$CLANG_DIR" >> "$GITHUB_ENV"
 
       - name: Clone GKI source (GitHub 镜像优先，失败回退 googlesource)
