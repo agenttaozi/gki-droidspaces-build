@@ -136,12 +136,19 @@ jobs:
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
 
           # === 秒级预检：UTS_RELEASE 必须【逐个符号】等于原厂真串，否则立刻失败，避免白编译 45 分钟 ===
+          # 注意：olddefconfig 阶段并不会生成 include/config/kernel.release（它要等正式编译时才产出），
+          # 所以必须显式请求该目标，否则 cat 读到空。
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 include/config/kernel.release
+          ls -l include/config/kernel.release || true
           KR=$(cat include/config/kernel.release 2>/dev/null || true)
+          if [ -z "$KR" ]; then
+            KR=$(make -s LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 kernelrelease 2>/dev/null | tail -1 || true)
+          fi
           TARGET="5.15.178-android13-8-00012-g4ea0fcb5d130-ab13530115"
           echo "UTS_RELEASE(preflight) = [$KR]"
           echo "TARGET                 = [$TARGET]"
           if [ "$KR" != "$TARGET" ]; then
-            echo "ERROR: UTS_RELEASE 不等于目标串（多余的 '$+' 或 '-g<sha>' 都会让原厂 .ko 拒绝加载）"
+            echo "ERROR: UTS_RELEASE 不等于目标串（多余的 '+' 或 '-g<sha>' 都会让原厂 .ko 拒绝加载）"
             exit 1
           fi
           echo "UTS_RELEASE preflight OK"
