@@ -106,18 +106,27 @@ jobs:
             --enable DEVTMPFS --enable MACVLAN --enable CGROUP_PIDS \
             --enable CFS_BANDWIDTH --enable IP6_NF_NAT --enable IP6_NF_TARGET_MASQUERADE \
             --enable IKCONFIG --enable IKCONFIG_PROC
-          # === 关键修复(反直觉)：必须【保留】CONFIG_MODVERSIONS=y ===
-          # 原厂 .ko 的 vermagic 串是
-          #   "...-ab13530115 SMP preempt mod_unload modversions aarch64"
-          # 末尾的 "modversions" 正对应 CONFIG_MODVERSIONS=y。内核加载模块时会对 VERMAGIC_STRING
-          # 做【整串 strcmp】，一旦我们关掉 MODVERSIONS，本内核的 vermagic 就少了 "modversions"
-          # 一词 -> 与原厂模块不再全等 -> insmod 直接 version magic mismatch -> 存储栈起不来。
-          # 早期版本为了绕过 CRC 互不相符而关闭它，属南辕北辙：正确做法是保持 MODVERSIONS=y，
-          # 同时保证符号 CRC 不变（同一 commit 源码 + 以完整原厂 config 为基底，仅增量加命名空间）。
-          scripts/config --enable MODVERSIONS
+          # === 关键修复：关闭 CRC 校验，但【强行保留】vermagic 里的 "modversions" 字样 ===
+          # 实测（run 40007810595 产物刷入后抓到的崩溃日志）vermagic 字符串这一关【已经通过】，
+          # 卡在了下一关：
+          #   printk_cpuid: disagrees about version of symbol module_layout
+          #   init: Failed to insmod '/lib/modules/printk_cpuid.ko': Exec format error
+          # 即 module_layout 符号的 CRC 对不上 —— 因为新增 PID_NS/IPC_NS/USER_NS 等必然改变
+          # nsproxy/cred 等结构布局，genksyms 算出的 module_layout CRC 不可能与原厂 .ko 相同，
+          # 而展讯 eMMC 驱动 sdhci_sprd.ko 正要靠 first-stage insmod 起来才有 super 分区。
+          # 解法：关掉 CONFIG_MODVERSIONS（内核不再做 CRC 校验，check_version 被 #ifdef 掉），
+          # 同时把 include/linux/vermagic.h 中 MODULE_VERMAGIC_MODVERSIONS 从 "" 强行改回
+          # "modversions " —— 这样本内核 VERMAGIC_STRING 仍与原厂 .ko 整串全等（strcmp 照过），
+          # CRC 那一关又不再校验，两组互相矛盾的条件同时化解。
+          scripts/config --disable MODVERSIONS
           scripts/config --enable MODULE_UNLOAD
-          # 注：加命名空间(PID_NS/IPC_NS/USER_NS)不改动 nsproxy/task_struct 布局，
-          # 与原厂 .ko 所依赖的那些导出符号 CRC 一致，故能正常加载。
+          sed -i 's|#define MODULE_VERMAGIC_MODVERSIONS ""|#define MODULE_VERMAGIC_MODVERSIONS "modversions "|' include/linux/vermagic.h
+          echo "--- vermagic.h 校验 ---"
+          grep -n "MODULE_VERMAGIC_MODVERSIONS" include/linux/vermagic.h
+          if grep -q 'MODULE_VERMAGIC_MODVERSIONS ""' include/linux/vermagic.h; then
+            echo "ERROR: vermagic.h 改写失败，内核 vermagic 将缺少 'modversions' 字段"; exit 1
+          fi
+          echo "vermagic.h patched OK"
           if scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
 
           # === 去掉 UTS_RELEASE 尾部的 dirty 标记 "+" （双保险）===
@@ -153,14 +162,14 @@ jobs:
           fi
           echo "UTS_RELEASE preflight OK"
           cd ..
-          echo "=== 校验关键配置（PID_NS/IPC_NS/SYSVIPC/USER_NS=y；MODVERSIONS 必须仍为 y）==="
+          echo "=== 校验关键配置（PID_NS/IPC_NS/SYSVIPC/USER_NS=y；MODVERSIONS 必须为 not set）==="
           for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_NONE MODVERSIONS MODULE_UNLOAD SMP PREEMPT; do
             v=$(grep -E "^CONFIG_${k}=" common/.config | head -1)
             echo "$k -> ${v:-NOT_SET}"
           done
-          # MODVERSIONS 必须是 y，否则 vermagic 少了 "modversions"，原厂模块全部拒绝加载
-          if ! grep -qE '^CONFIG_MODVERSIONS=y' common/.config; then
-            echo "ERROR: CONFIG_MODVERSIONS 未开启，vermagic 将缺少 'modversions'，原厂模块无法加载"; exit 1
+          # MODVERSIONS 必须关闭：否则 module_layout 的 CRC 与原厂 .ko 不符，insmod 依旧失败
+          if grep -qE '^CONFIG_MODVERSIONS=y' common/.config; then
+            echo "ERROR: CONFIG_MODVERSIONS 未关闭，module_layout CRC 校验会让原厂模块加载失败"; exit 1
           fi
 
       - name: Build uncompressed Image (clang-14)
@@ -220,6 +229,6 @@ jobs:
           gh release create "$TAG" boot_a_droidspaces.img \
             --repo "$GITHUB_REPOSITORY" \
             --title "W210DS Droidspaces boot (latest)" \
-            --notes "内核已补 PID_NS/IPC_NS/SYSVIPC/USER_NS 等命名空间，关闭 MODVERSIONS，vermagic 精确匹配原厂模块。刷入前请确认设备处于 A/B 安全槽（boot_a）。"
+            --notes "内核已补 PID_NS/IPC_NS/SYSVIPC/USER_NS 等命名空间；关闭 MODVERSIONS 的 CRC 校验但保留 vermagic 中的 modversions 字样，使展讯原厂 .ko（含 eMMC 驱动 sdhci_sprd）能正常加载。刷入前请确认设备处于 A/B 安全槽（boot_a）。"
           echo "RELEASE_URL=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/boot_a_droidspaces.img" >> "$GITHUB_ENV"
           echo "成品下载地址: $RELEASE_URL"
