@@ -20,11 +20,35 @@ jobs:
       - name: Checkout this repo
         uses: actions/checkout@v4
 
-      - name: Install build deps (clang/lld 14, GKI 5.15 支持)
+      - name: Install build deps (GKI 5.15 支持；clang 用 AOSP 预编译版，不装 apt 的)
         run: |
           sudo apt-get update
           sudo apt-get install -y bc bison flex libssl-dev wget python3 git ccache \
-            clang lld llvm gcc-aarch64-linux-gnu libelf-dev zip curl
+            gcc-aarch64-linux-gnu libelf-dev zip curl pkg-config
+
+      - name: Download AOSP clang-r450784e (clang 14.0.7) —— 必须精确匹配原厂 .ko 的 vermagic 编译器串
+        run: |
+          set -e
+          CLANG_VER=r450784e
+          CLANG_DIR="$PWD/clang-$CLANG_VER"
+          for REF in master main android13-5.15; do
+            echo ">>> try ref: $REF"
+            if curl -sSL --max-time 180 -o clang.tar.gz \
+              "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/$REF/clang-$CLANG_VER.tar.gz"; then
+              if tar tzf clang.tar.gz >/dev/null 2>&1; then
+                mkdir -p "$CLANG_DIR"
+                tar xf clang.tar.gz -C "$CLANG_DIR"
+                echo "downloaded from ref=$REF"
+                break
+              fi
+            fi
+            echo "ref $REF failed, retry next"
+          done
+          if [ ! -x "$CLANG_DIR/bin/clang" ]; then
+            echo "ERROR: clang-$CLANG_VER 下载失败"; exit 1
+          fi
+          "$CLANG_DIR/bin/clang" --version
+          echo "CLANG_DIR=$CLANG_DIR" >> "$GITHUB_ENV"
 
       - name: Clone GKI source (GitHub 镜像优先，失败回退 googlesource)
         run: |
@@ -45,49 +69,51 @@ jobs:
           curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -
           cd ..
 
-      - name: Prepare .config from device base + enable namespaces
+      - name: Prepare .config from device base + enable namespaces + 匹配原厂 vermagic
         run: |
           set -e
           cp config/w210ds_base.config common/.config
           cd common
-          # 关闭 GKI 符号白名单（原构建机的路径在本机不存在，否则构建失败）
           scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
           scripts/config --disable TRIM_UNUSED_KSYMS
-          # 先开 SYSVIPC —— IPC_NS 依赖它（这是设备原配置里 IPC_NS 连选项都没有的根因）
+          # 先开 SYSVIPC —— IPC_NS 依赖它（设备原配置里 IPC_NS 连选项都没有的根因）
           scripts/config --enable SYSVIPC
-          # 关 DEBUG_INFO / 强制 LTO=NONE：免费 runner 只有 7GB 内存，LTO 链接会 OOM 被杀
+          # 强制 LTO=NONE：免费 runner 只有 7GB 内存，LTO 链接会 OOM 被杀
           scripts/config --disable DEBUG_INFO
           scripts/config --enable LD_IS_LLD
-          # 用 sed 强制把 choice 里的 LTO 选项写成 NONE（scripts/config --disable 会被 olddefconfig 的默认值覆盖回来）
           sed -i -E 's/^CONFIG_LTO_CLANG_THIN=.*/# CONFIG_LTO_CLANG_THIN is not set/; s/^CONFIG_LTO_CLANG_FULL=.*/# CONFIG_LTO_CLANG_FULL is not set/; s/^CONFIG_LTO_CLANG=.*/# CONFIG_LTO_CLANG is not set/; s/^CONFIG_LTO_NONE=.*/# CONFIG_LTO_NONE is not set/' .config
           printf 'CONFIG_LTO_NONE=y\n' >> .config
           make LLVM=1 ARCH=arm64 olddefconfig
-          # 校验 LTO 已彻底关闭，否则直接失败，避免再次空跑 20 分钟
           if grep -qE '^CONFIG_LTO_CLANG_THIN=y|^CONFIG_LTO_CLANG_FULL=y' .config; then
-            echo "ERROR: LTO 仍未关闭，当前 LTO 配置："; grep -E 'CONFIG_LTO' .config; exit 1
+            echo "ERROR: LTO 仍未关闭"; grep -E 'CONFIG_LTO' .config; exit 1
           fi
-          echo "LTO 状态："; grep -E 'CONFIG_LTO' .config
+          # === 关键：让内核 vermagic 精确匹配原厂 .ko 模块 ===
+          # 模块 vermagic = 5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925 ... clang 14.0.7 (r450784e)
+          scripts/config --disable LOCALVERSION_AUTO
+          scripts/config --set-str LOCALVERSION "-android13-8-gb370d3baf5b7-ab20251103.222925"
           # 再开 Droidspaces 需要的其余命名空间 / cgroup / 网络选项
           scripts/config --enable PID_NS --enable IPC_NS --enable USER_NS \
             --enable DEVTMPFS --enable MACVLAN --enable CGROUP_PIDS \
             --enable CFS_BANDWIDTH --enable IP6_NF_NAT --enable IP6_NF_TARGET_MASQUERADE \
             --enable IKCONFIG --enable IKCONFIG_PROC
-          # 注入 SukiSU 后开启 KSU（若未注入则忽略）
           if scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
           make LLVM=1 ARCH=arm64 olddefconfig
           cd ..
           echo "=== 校验关键配置（应为 =y） ==="
-          for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU; do
+          for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_NONE; do
             v=$(grep -E "^CONFIG_${k}=" common/.config | head -1)
             echo "$k -> ${v:-NOT_FOUND}"
           done
 
-      - name: Build uncompressed Image (LLVM=1)
+      - name: Build uncompressed Image (用 AOSP clang-r450784e)
         run: |
           set -e
+          export PATH="${{ env.CLANG_DIR }}/bin:$PATH"
           cd common
           make LLVM=1 ARCH=arm64 -j"$(nproc)" Image
           ls -la arch/arm64/boot/Image
+          echo "=== 校验产物 vermagic 前缀是否匹配原厂模块 ==="
+          strings arch/arm64/boot/Image | grep -m1 "5.15.178-android13-8-gb370d3baf5b7" || echo "WARN: vermagic 前缀未匹配，请检查 LOCALVERSION"
           cd ..
 
       - name: Locate boot_a.bin (asset or download)
