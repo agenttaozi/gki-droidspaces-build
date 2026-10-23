@@ -48,6 +48,14 @@ jobs:
           cd common
           git checkout ${{ github.event.inputs.KERNEL_COMMIT }} || \
             { git fetch origin ${{ github.event.inputs.KERNEL_COMMIT }} && git checkout FETCH_HEAD; }
+          # 校验：必须真正停在原厂那个 commit 上。若回退到分支 HEAD，
+          # 即使 UTS_RELEASE 被强制对齐，导出符号的 CRC 也会变，原厂 .ko 照样加载失败。
+          HEAD_SHA=$(git rev-parse HEAD)
+          echo "kernel HEAD = $HEAD_SHA"
+          case "$HEAD_SHA" in
+            4ea0fcb5d1308f2f5a5d*) echo "commit OK: 与原厂一致" ;;
+            *) echo "WARNING: commit 与原厂不一致 (期望 4ea0fcb5d1308f2f5a5d*)，CRC 可能不匹配" ;;
+          esac
           cd ..
 
       - name: Integrate SukiSU (optional, 保留 root)
@@ -77,16 +85,17 @@ jobs:
             echo "ERROR: LTO 仍未关闭"; grep -E 'CONFIG_LTO' .config; exit 1
           fi
           # === 关键：让内核 vermagic（UTS_RELEASE）精确匹配原厂 .ko 模块 ===
-          # 原厂模块 vermagic = 5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925
+          # 目标取自真机 `uname -a`，以及原厂 boot.img 内核二进制中的 VERMAGIC_STRING：
+          #   "5.15.178-android13-8-00012-g4ea0fcb5d130-ab13530115 SMP preempt mod_unload modversions aarch64"
           # 内核 utsrelease = $(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)$(LOCALVERSION)
-          # 做法：直接在 Makefile 硬设前三项 + 把完整后缀写进 EXTRAVERSION，并清空 LOCALVERSION、
-          # 关闭 LOCALVERSION_AUTO（避免自动追加 -g<sha> 或 -dirty），同时删掉任何 localversion* 文件，
-          # 从而无论源码树自身版本号是多少，最终 UTS_RELEASE 都精确等于目标串。
-          # （Build 2 崩溃根因就是 EXTRAVERSION 残留 -g4ea0fcb5d130 导致 UTS_RELEASE 对不上）
+          # 历史 BUG：早期版本把目标写成了 gb370d3baf5b7-ab20251103.222925（那是【自编译产物自己】的
+          # 版本号，等于拿自己对齐自己），导致 /lib/modules/*.ko insmod 全部 Exec format error、
+          # 存储栈起不来 -> init 找不到 super/metadata/backup -> kernel panic -> A/B 回滚。
+          # 修正后目标为原厂真实串 00012-g4ea0fcb5d130-ab13530115。
           sed -i -E 's/^VERSION[[:space:]]*=.*/VERSION = 5/' Makefile
           sed -i -E 's/^PATCHLEVEL[[:space:]]*=.*/PATCHLEVEL = 15/' Makefile
           sed -i -E 's/^SUBLEVEL[[:space:]]*=.*/SUBLEVEL = 178/' Makefile
-          sed -i -E 's/^EXTRAVERSION[[:space:]]*=.*/EXTRAVERSION = -android13-8-gb370d3baf5b7-ab20251103.222925/' Makefile
+          sed -i -E 's/^EXTRAVERSION[[:space:]]*=.*/EXTRAVERSION = -android13-8-00012-g4ea0fcb5d130-ab13530115/' Makefile
           # 删掉任何可能追加后缀的 localversion* 文件（排除 .git 目录）
           find . -maxdepth 1 -name 'localversion*' -not -name '*.c' -delete 2>/dev/null || true
           grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL|EXTRAVERSION)' Makefile
@@ -97,23 +106,29 @@ jobs:
             --enable DEVTMPFS --enable MACVLAN --enable CGROUP_PIDS \
             --enable CFS_BANDWIDTH --enable IP6_NF_NAT --enable IP6_NF_TARGET_MASQUERADE \
             --enable IKCONFIG --enable IKCONFIG_PROC
-          # === 关键修复：关闭 MODVERSIONS ===
-          # 原厂 .ko 是用原厂内核配置编译的，其 module_layout CRC 依赖原厂完整配置。
-          # 我们基于完整原厂配置只做【增量】改动（加命名空间），但为彻底避免 CRC 不匹配
-          # 导致原厂模块全部拒绝加载、存储栈起不来（上一版即此原因崩溃），直接关闭
-          # CONFIG_MODVERSIONS，让内核跳过 module_layout CRC 校验加载原厂模块。
-          # 加命名空间是纯增量（只在 nsproxy 里加字段，原厂模块不触碰这些新字段），ABI 仍兼容。
-          scripts/config --disable MODVERSIONS
+          # === 关键修复(反直觉)：必须【保留】CONFIG_MODVERSIONS=y ===
+          # 原厂 .ko 的 vermagic 串是
+          #   "...-ab13530115 SMP preempt mod_unload modversions aarch64"
+          # 末尾的 "modversions" 正对应 CONFIG_MODVERSIONS=y。内核加载模块时会对 VERMAGIC_STRING
+          # 做【整串 strcmp】，一旦我们关掉 MODVERSIONS，本内核的 vermagic 就少了 "modversions"
+          # 一词 -> 与原厂模块不再全等 -> insmod 直接 version magic mismatch -> 存储栈起不来。
+          # 早期版本为了绕过 CRC 互不相符而关闭它，属南辕北辙：正确做法是保持 MODVERSIONS=y，
+          # 同时保证符号 CRC 不变（同一 commit 源码 + 以完整原厂 config 为基底，仅增量加命名空间）。
+          scripts/config --enable MODVERSIONS
+          scripts/config --enable MODULE_UNLOAD
+          # 注：加命名空间(PID_NS/IPC_NS/USER_NS)不改动 nsproxy/task_struct 布局，
+          # 与原厂 .ko 所依赖的那些导出符号 CRC 一致，故能正常加载。
           if scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
           cd ..
-          echo "=== 校验关键配置（PID_NS/IPC_NS/SYSVIPC= y；MODVERSIONS= 应为 not set）==="
-          for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_NONE MODVERSIONS; do
+          echo "=== 校验关键配置（PID_NS/IPC_NS/SYSVIPC/USER_NS=y；MODVERSIONS 必须仍为 y）==="
+          for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_NONE MODVERSIONS MODULE_UNLOAD SMP PREEMPT; do
             v=$(grep -E "^CONFIG_${k}=" common/.config | head -1)
             echo "$k -> ${v:-NOT_SET}"
           done
-          if grep -qE '^CONFIG_MODVERSIONS=y' common/.config; then
-            echo "ERROR: MODVERSIONS 未关闭，原厂模块将 CRC 校验失败"; exit 1
+          # MODVERSIONS 必须是 y，否则 vermagic 少了 "modversions"，原厂模块全部拒绝加载
+          if ! grep -qE '^CONFIG_MODVERSIONS=y' common/.config; then
+            echo "ERROR: CONFIG_MODVERSIONS 未开启，vermagic 将缺少 'modversions'，原厂模块无法加载"; exit 1
           fi
 
       - name: Build uncompressed Image (clang-14)
@@ -123,12 +138,16 @@ jobs:
           cd common
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 -j"$(nproc)" Image
           ls -la arch/arm64/boot/Image
-          echo "=== 校验产物 vermagic 是否精确匹配原厂模块（不匹配则构建失败，避免刷出无法开机的镜像）==="
-          VM=$(strings arch/arm64/boot/Image | grep -m1 "5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925" || true)
+          echo "=== 校验产物 vermagic 是否精确匹配原厂模块（不匹配则直接构建失败，避免刷出开不了机的镜像）==="
+          # 目标须为【整串】匹配：UTS_RELEASE + SMP/preempt/mod_unload/modversions/aarch64
+          VM=$(strings arch/arm64/boot/Image | grep -m1 "^5.15.178-android13-8-00012-g4ea0fcb5d130-ab13530115 SMP preempt mod_unload modversions aarch64$" || true)
           if [ -z "$VM" ]; then
-            echo "ERROR: vermagic 未精确匹配原厂模块，产物不可用"; exit 1
+            echo "ERROR: vermagic 未精确匹配原厂模块，产物不可用（刷入必 panic）"
+            echo "实际取到的 UTS_RELEASE 候选："
+            strings arch/arm64/boot/Image | grep -m5 "^5\.15\.178" || true
+            exit 1
           fi
-          echo "vermagic OK: $VM"
+          echo "vermagic OK -> $VM"
           cd ..
 
       - name: Locate boot_a.bin (asset or download)
