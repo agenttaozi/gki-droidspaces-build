@@ -78,11 +78,18 @@ jobs:
           # 强制 LTO=NONE：免费 runner 只有 7GB 内存，LTO 链接会 OOM 被杀
           scripts/config --disable DEBUG_INFO
           scripts/config --enable LD_IS_LLD
-          sed -i -E 's/^CONFIG_LTO_CLANG_THIN=.*/# CONFIG_LTO_CLANG_THIN is not set/; s/^CONFIG_LTO_CLANG_FULL=.*/# CONFIG_LTO_CLANG_FULL is not set/; s/^CONFIG_LTO_CLANG=.*/# CONFIG_LTO_CLANG is not set/; s/^CONFIG_LTO_NONE=.*/# CONFIG_LTO_NONE is not set/' .config
-          printf 'CONFIG_LTO_NONE=y\n' >> .config
+          # 【v7】改用 LTO_CLANG_THIN：原厂是 LTO_CLANG_FULL，此前强制 LTO_NONE 会导致 init 崩溃
+          # （疑为 kCFI/模块 ABI 约定与 FULL 编的 .ko 不符）。THIN 链接内存峰值远低于 FULL，
+          # 7GB runner 通常可过；kCFI + MODVERSIONS CRC 与 LTO 类型无关，故 THIN 内核应能加载
+          # 原厂 FULL 编译的 .ko。这是验证"LTO 是否为死结"的关键分水岭。
+          sed -i -E 's/^CONFIG_LTO_CLANG_FULL=.*/# CONFIG_LTO_CLANG_FULL is not set/; s/^CONFIG_LTO_NONE=.*/# CONFIG_LTO_NONE is not set/' .config
+          printf 'CONFIG_LTO_CLANG_THIN=y\n' >> .config
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
-          if grep -qE '^CONFIG_LTO_CLANG_THIN=y|^CONFIG_LTO_CLANG_FULL=y' .config; then
-            echo "ERROR: LTO 仍未关闭"; grep -E 'CONFIG_LTO' .config; exit 1
+          if grep -qE '^CONFIG_LTO_CLANG_FULL=y' .config; then
+            echo "ERROR: LTO_CLANG_FULL 仍存在(会 OOM)"; grep -E 'CONFIG_LTO' .config; exit 1
+          fi
+          if ! grep -qE '^CONFIG_LTO_CLANG_THIN=y' .config; then
+            echo "ERROR: LTO_CLANG_THIN 未启用"; grep -E 'CONFIG_LTO' .config; exit 1
           fi
           # === 关键：让内核 vermagic（UTS_RELEASE）精确匹配原厂 vendor_boot 里的 .ko 模块 ===
           # 原厂 boot.img 内核二进制里的 VERMAGIC_STRING 是 KERNEL 版本：
@@ -164,7 +171,7 @@ jobs:
           echo "UTS_RELEASE preflight OK"
           cd ..
           echo "=== 校验关键配置（PID_NS/IPC_NS/SYSVIPC/USER_NS=y；MODVERSIONS 必须为 not set）==="
-          for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_NONE MODVERSIONS MODULE_UNLOAD SMP PREEMPT; do
+          for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_CLANG_THIN MODVERSIONS MODULE_UNLOAD SMP PREEMPT; do
             v=$(grep -E "^CONFIG_${k}=" common/.config | head -1)
             echo "$k -> ${v:-NOT_SET}"
           done
