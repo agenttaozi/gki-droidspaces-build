@@ -73,9 +73,8 @@ jobs:
           cd common
           scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
           scripts/config --disable TRIM_UNUSED_KSYMS
-          # 【诊断 v6】纯 stock config：保持原厂 .config 原样，不开启 SYSVIPC，
-          # 仅验证"修 vermagic 匹配 + 关 MODVERSIONS"的基底内核能否在 B 槽正常启动。
-          # 强制 LTO=NONE：免费 runner 只有 7GB 内存，LTO 链接会 OOM 被杀
+          # 【v8】开启 SYSVIPC（IPC_NS 依赖；原厂 config 里是 not set）
+          scripts/config --enable SYSVIPC
           scripts/config --disable DEBUG_INFO
           scripts/config --enable LD_IS_LLD
           # 【v7】改用 LTO_CLANG_THIN：原厂是 LTO_CLANG_FULL，此前强制 LTO_NONE 会导致 init 崩溃
@@ -111,9 +110,14 @@ jobs:
           grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL|EXTRAVERSION)' Makefile
           scripts/config --disable LOCALVERSION_AUTO
           scripts/config --set-str LOCALVERSION ""
-          # 【诊断 v6】纯 stock config：不开启 PID_NS/IPC_NS/USER_NS 等任何 Droidspaces 选项。
-          # 目的：排除"namespace 改变内核 ABI → 原厂 .ko 跑在错布局 → init 崩溃"这一假设，
-          # 若此版能启动，则证明基底内核 + vermagic 修复本身正确，崩溃 100% 来自 namespace 选项。
+          # 【v8】开启 Droidspaces 硬必需 + 容器常用选项。v7 已证明纯 stock 基底可启动；
+          # 此版验证"加 PID_NS/IPC_NS 等命名空间后，展锐 .ko 是否仍兼容"。
+          # 暂不开 USER_NS：它改 cred/nsproxy 布局，ABI 风险最大且非 Droidspaces 硬必需，
+          # 留待 v9 单独验证（Docker/沙箱才需要）。
+          scripts/config --enable PID_NS --enable IPC_NS \
+            --enable DEVTMPFS --enable MACVLAN --enable CGROUP_PIDS \
+            --enable CFS_BANDWIDTH --enable IP6_NF_NAT --enable IP6_NF_TARGET_MASQUERADE \
+            --enable IKCONFIG --enable IKCONFIG_PROC --enable SECCOMP --enable SECCOMP_FILTER
           # === 关键修复：关闭 CRC 校验，但【强行保留】vermagic 里的 "modversions" 字样 ===
           # 实测（run 40007810595 产物刷入后抓到的崩溃日志）vermagic 字符串这一关【已经通过】，
           # 卡在了下一关：
