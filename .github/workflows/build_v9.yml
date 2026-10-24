@@ -58,7 +58,7 @@ jobs:
           esac
           cd ..
 
-      - name: Apply Droidspaces SYSVIPC kABI patch (ABI-safe: sysv fields -> reserved padding)
+      - name: Apply Droidspaces SYSVIPC kABI patch (move sysv fields into reserved padding)
         run: |
           set -e
           cd common
