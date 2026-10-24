@@ -1,0 +1,267 @@
+name: Build W210DS GKI Droidspaces v11 (full + cgroup cpu/pids limits)
+
+on:
+  workflow_dispatch:
+    inputs:
+      SUKISU:
+        description: "注入 SukiSU 保留 root (false 则只编译命名空间内核，不集成 root)"
+        required: true
+        default: "true"
+      KERNEL_COMMIT:
+        description: "GKI 源码提交 (默认对应你设备的 5.15.178 android13-5.15-2025-03_r6)"
+        required: false
+        default: "4ea0fcb5d1308f2f5a5d"
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Install build deps (GKI 5.15 支持；使用 apt 的 clang-14)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev wget python3 git ccache \
+            gcc-aarch64-linux-gnu libelf-dev zip curl pkg-config clang-14 lld-14
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          # 让后续所有步骤的 make 都能找到 clang-14 / ld.lld-14（系统无默认 clang 命令）
+          echo "PATH=/usr/lib/llvm-14/bin:$PATH" >> "$GITHUB_ENV"
+
+      - name: Compiler = clang-14 (apt) —— 关键在 UTS_RELEASE 精确匹配原厂，编译器小版本不影响模块 vermagic
+        run: |
+          set -e
+          clang-14 --version | head -1
+          ld.lld-14 --version | head -1
+          echo "CLANG_CC=clang-14" >> "$GITHUB_ENV"
+          echo "CLANG_LD=ld.lld-14" >> "$GITHUB_ENV"
+
+      - name: Clone GKI source (GitHub 镜像优先，失败回退 googlesource)
+        run: |
+          set -e
+          git clone --filter=blob:none --no-checkout \
+            https://github.com/KernelSU/kernel_common_mirror common 2>/dev/null || \
+          git clone --filter=blob:none --no-checkout \
+            https://android.googlesource.com/kernel/common common
+          cd common
+          git checkout ${{ github.event.inputs.KERNEL_COMMIT }} || \
+            { git fetch origin ${{ github.event.inputs.KERNEL_COMMIT }} && git checkout FETCH_HEAD; }
+          # 校验：必须真正停在原厂那个 commit 上。若回退到分支 HEAD，
+          # 即使 UTS_RELEASE 被强制对齐，导出符号的 CRC 也会变，原厂 .ko 照样加载失败。
+          HEAD_SHA=$(git rev-parse HEAD)
+          echo "kernel HEAD = $HEAD_SHA"
+          case "$HEAD_SHA" in
+            4ea0fcb5d1308f2f5a5d*) echo "commit OK: 与原厂一致" ;;
+            *) echo "WARNING: commit 与原厂不一致 (期望 4ea0fcb5d1308f2f5a5d*)，CRC 可能不匹配" ;;
+          esac
+          cd ..
+
+      - name: Apply Droidspaces SYSVIPC kABI patch (move sysv fields into reserved padding)
+        run: |
+          set -e
+          cd common
+          PATCH="../patches/001.GKI-below-6.12-fix_sysvipc_kabi_6_7_8.patch"
+          applied=0
+          if git apply --check "$PATCH" 2>/dev/null; then git apply "$PATCH"; applied=1; echo "kABI patch applied via git apply"; fi
+          if [ "$applied" = "0" ]; then
+            if patch -p1 --dry-run < "$PATCH" >/dev/null 2>&1; then patch -p1 < "$PATCH"; applied=1; echo "kABI patch applied via patch -p1"; fi
+          fi
+          if [ "$applied" = "0" ]; then echo "ERROR: kABI 补丁无法应用(上下文不匹配)"; exit 1; fi
+          echo "=== verify sched.h 已被补丁修改 ==="
+          grep -n "ANDROID_KABI_USE(6" include/linux/sched.h || { echo "ERROR: 补丁未生效"; exit 1; }
+          cd ..
+
+      - name: Integrate SukiSU (optional, 保留 root)
+        if: ${{ github.event.inputs.SUKISU == 'true' }}
+        run: |
+          cd common
+          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -
+          cd ..
+
+      - name: Prepare .config from device base + enable namespaces + 匹配原厂 vermagic
+        run: |
+          set -e
+          # 用【完整原厂 .config】作基底（6958 行，含全部选项，确保 module_layout CRC 与原厂内核一致）
+          cp config/w210ds_full.config common/.config
+          cd common
+          scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
+          scripts/config --disable TRIM_UNUSED_KSYMS
+          # 【v8】开启 SYSVIPC（IPC_NS 依赖；原厂 config 里是 not set）
+          scripts/config --enable SYSVIPC
+          scripts/config --disable DEBUG_INFO
+          scripts/config --enable LD_IS_LLD
+          # 【v7】改用 LTO_CLANG_THIN：原厂是 LTO_CLANG_FULL，此前强制 LTO_NONE 会导致 init 崩溃
+          sed -i -E 's/^CONFIG_LTO_CLANG_FULL=.*/# CONFIG_LTO_CLANG_FULL is not set/; s/^CONFIG_LTO_NONE=.*/# CONFIG_LTO_NONE is not set/' .config
+          printf 'CONFIG_LTO_CLANG_THIN=y\n' >> .config
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
+          if grep -qE '^CONFIG_LTO_CLANG_FULL=y' .config; then
+            echo "ERROR: LTO_CLANG_FULL 仍存在(会 OOM)"; grep -E 'CONFIG_LTO' .config; exit 1
+          fi
+          if ! grep -qE '^CONFIG_LTO_CLANG_THIN=y' .config; then
+            echo "ERROR: LTO_CLANG_THIN 未启用"; grep -E 'CONFIG_LTO' .config; exit 1
+          fi
+          # === 关键：让内核 vermagic（UTS_RELEASE）精确匹配原厂 vendor_boot 里的 .ko 模块 ===
+          sed -i -E 's/^VERSION[[:space:]]*=.*/VERSION = 5/' Makefile
+          sed -i -E 's/^PATCHLEVEL[[:space:]]*=.*/PATCHLEVEL = 15/' Makefile
+          sed -i -E 's/^SUBLEVEL[[:space:]]*=.*/SUBLEVEL = 178/' Makefile
+          sed -i -E 's/^EXTRAVERSION[[:space:]]*=.*/EXTRAVERSION = -android13-8-gb370d3baf5b7-ab20251103.222925/' Makefile
+          find . -maxdepth 1 -name 'localversion*' -not -name '*.c' -delete 2>/dev/null || true
+          grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL|EXTRAVERSION)' Makefile
+          scripts/config --disable LOCALVERSION_AUTO
+          scripts/config --set-str LOCALVERSION ""
+          # 【v11】= v10 全功能版 + cgroup cpu/pids 限制（Droidspaces --cpus / --pids-limit）
+          # A. 命名空间(v9 已验证层,含 SYSVIPC kABI 补丁)
+          scripts/config --enable SYSVIPC --enable POSIX_MQUEUE \
+            --enable PID_NS --enable IPC_NS \
+            --enable DEVTMPFS --enable DEVTMPFS_MOUNT \
+            --enable NETFILTER_XT_MATCH_ADDRTYPE \
+            --enable IKCONFIG --enable IKCONFIG_PROC --enable SECCOMP --enable SECCOMP_FILTER
+          # B. Docker/容器(v9/v10 已验证层)
+          scripts/config --enable USER_NS --enable OVERLAY_FS \
+            --enable VETH --enable BRIDGE --enable BRIDGE_NETFILTER \
+            --enable MACVLAN --enable IPVLAN \
+            --enable IP6_NF_NAT --enable IP6_NF_TARGET_MASQUERADE \
+            --enable TUN --enable FUSE_FS --enable BLK_DEV_LOOP \
+            --enable CPUSETS --enable MEMCG --enable MEMCG_SWAP --enable MEMCG_SWAP_ENABLED \
+            --enable CGROUP_SCHED --enable CGROUP_FREEZER --enable CGROUP_DEVICE \
+            --enable CGROUP_NET_PRIO --enable CGROUP_CPUACCT \
+            --enable CGROUP_BPF --enable NET_CLS_ACT --enable NET_SCH_INGRESS
+          # 【v11 新增】cgroup cpu/pids 限制（v8 bootloop 元凶，v11 在 MODVERSIONS 关闭前提下重开）
+          # CFS_BANDWIDTH 依赖 FAIR_GROUP_SCHED（基底 config 已 y，olddefconfig 保持）
+          # CGROUP_PIDS 提供 pids.max（Droidspaces --pids-limit）
+          # 风险控制：v9 起已关闭 CONFIG_MODVERSIONS + 保留 vermagic "modversions" 字样，
+          # 原厂 .ko 不再做符号 CRC 校验（check_version 被 #ifdef 掉），仅要求整串 vermagic 相等；
+          # 且已从 ZTE 源码树核实无展锐驱动直接访问 cfs_rq/sched_entity/task_group 等 scheduler 内部结构。
+          scripts/config --enable CFS_BANDWIDTH --enable CGROUP_PIDS
+          # C. 虚拟化/KVM(v10 已验证层)
+          scripts/config --enable VHOST --enable VHOST_NET \
+            --enable VIRTIO --enable VIRTIO_PCI --enable VIRTIO_PCI_LEGACY --enable VIRTIO_MMIO \
+            --enable VIRTIO_NET --enable VIRTIO_BLK --enable VIRTIO_CONSOLE \
+            --enable VIRTIO_BALLOON --enable VIRTIO_INPUT --enable HW_RANDOM_VIRTIO \
+            --enable 9P_FS --enable NET_9P --enable NET_9P_VIRTIO --enable PCI_HOST_GENERIC
+          # === 关键修复：关闭 CRC 校验，但【强行保留】vermagic 里的 "modversions" 字样 ===
+          # 实测（run 40007810595 产物刷入后抓到的崩溃日志）vermagic 字符串这一关【已经通过】，
+          # 卡在了下一关：
+          #   printk_cpuid: disagrees about version of symbol module_layout
+          #   init: Failed to insmod '/lib/modules/printk_cpuid.ko': Exec format error
+          # 解法：关掉 CONFIG_MODVERSIONS（内核不再做 CRC 校验，check_version 被 #ifdef 掉），
+          # 同时把 include/linux/vermagic.h 中 MODULE_VERMAGIC_MODVERSIONS 从 "" 强行改回
+          # "modversions " —— 这样本内核 VERMAGIC_STRING 仍与原厂 .ko 整串全等（strcmp 照过），
+          # CRC 那一关又不再校验。v11 重开 CFS_BANDWIDTH/CGROUP_PIDS 正是靠这一点：
+          # 否则约 4000 个符号 CRC 变化会让原厂 .ko 拒绝加载（v8 bootloop 的直接死因）。
+          scripts/config --disable MODVERSIONS
+          scripts/config --enable MODULE_UNLOAD
+          sed -i 's|#define MODULE_VERMAGIC_MODVERSIONS ""|#define MODULE_VERMAGIC_MODVERSIONS "modversions "|' include/linux/vermagic.h
+          echo "--- vermagic.h 校验 ---"
+          grep -n "MODULE_VERMAGIC_MODVERSIONS" include/linux/vermagic.h
+          if grep -q 'MODULE_VERMAGIC_MODVERSIONS ""' include/linux/vermagic.h; then
+            echo "ERROR: vermagic.h 改写失败，内核 vermagic 将缺少 'modversions' 字段"; exit 1
+          fi
+          echo "vermagic.h patched OK"
+          if scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
+
+          # === 去掉 UTS_RELEASE 尾部的 dirty 标记 "+" （双保险）===
+          git config --global --add safe.directory "$PWD" || true
+          git config user.email buildbot@example.com || true
+          git config user.name buildbot || true
+          git add -A >/dev/null 2>&1 || true
+          git commit -q -m "SukiSU + Droidspaces namespaces config" >/dev/null 2>&1 || echo "(no changes to commit)"
+          touch .scmversion
+
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
+
+          # === 秒级预检：UTS_RELEASE 必须【逐个符号】等于原厂真串，否则立刻失败，避免白编译 45 分钟 ===
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 include/config/kernel.release
+          ls -l include/config/kernel.release || true
+          KR=$(cat include/config/kernel.release 2>/dev/null || true)
+          if [ -z "$KR" ]; then
+            KR=$(make -s LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 kernelrelease 2>/dev/null | tail -1 || true)
+          fi
+          TARGET="5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925"
+          echo "UTS_RELEASE(preflight) = [$KR]"
+          echo "TARGET                 = [$TARGET]"
+          if [ "$KR" != "$TARGET" ]; then
+            echo "ERROR: UTS_RELEASE 不等于目标串（多余的 '+' 或 '-g<sha>' 都会让原厂 .ko 拒绝加载）"
+            exit 1
+          fi
+          echo "UTS_RELEASE preflight OK"
+          cd ..
+          echo "=== 校验关键配置（PID_NS/IPC_NS/SYSVIPC/USER_NS/CFS_BANDWIDTH/CGROUP_PIDS=y；MODVERSIONS 必须为 not set）==="
+          for k in SYSVIPC POSIX_MQUEUE PID_NS IPC_NS DEVTMPFS USER_NS OVERLAY_FS VETH BRIDGE TUN FUSE_FS BLK_DEV_LOOP CPUSETS MEMCG VHOST VIRTIO KVM 9P_FS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_CLANG_THIN MODVERSIONS MODULE_UNLOAD SMP PREEMPT FAIR_GROUP_SCHED CFS_BANDWIDTH CGROUP_PIDS; do
+            v=$(grep -E "^CONFIG_${k}=" common/.config | head -1)
+            echo "$k -> ${v:-NOT_SET}"
+          done
+          # v11 硬约束:CFS_BANDWIDTH/CGROUP_PIDS 必须开启（Droidspaces --cpus / --pids-limit）
+          # 前提：MODVERSIONS 已关闭（上方校验），否则约4000符号CRC变化→原厂.ko拒绝加载→bootloop
+          for k in CFS_BANDWIDTH CGROUP_PIDS; do
+            if ! grep -qE "^CONFIG_${k}=y" common/.config; then
+              echo "ERROR: CONFIG_${k} 未开启，--cpus/--pids-limit 仍不可用"; exit 1
+            fi
+            echo "$k -> enabled (v11)"
+          done
+          # MODVERSIONS 必须关闭：否则 module_layout 的 CRC 与原厂 .ko 不符，insmod 依旧失败
+          if grep -qE '^CONFIG_MODVERSIONS=y' common/.config; then
+            echo "ERROR: CONFIG_MODVERSIONS 未关闭，module_layout CRC 校验会让原厂模块加载失败"; exit 1
+          fi
+
+      - name: Build uncompressed Image (clang-14)
+        run: |
+          set -e
+          export PATH="/usr/lib/llvm-14/bin:$PATH"
+          cd common
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 -j"$(nproc)" Image
+          ls -la arch/arm64/boot/Image
+          echo "=== 校验产物 vermagic 是否精确匹配原厂模块（不匹配则直接构建失败，避免刷出开不了机的镜像）==="
+          VM=$(strings arch/arm64/boot/Image | grep -m1 "^5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925 SMP preempt mod_unload modversions aarch64$" || true)
+          if [ -z "$VM" ]; then
+            echo "ERROR: vermagic 未精确匹配原厂模块，产物不可用（刷入必 panic）"
+            echo "实际取到的 UTS_RELEASE 候选："
+            strings arch/arm64/boot/Image | grep -m5 "^5\.15\.178" || true
+            exit 1
+          fi
+          echo "vermagic OK -> $VM"
+          cd ..
+
+      - name: Locate boot_a.bin (asset or download)
+        run: |
+          BOOT=assets/boot_a.bin
+          if [ ! -f "$BOOT" ]; then
+            if [ -z "${{ secrets.BOOT_URL }}" ]; then
+              echo "ERROR: 既无 assets/boot_a.bin 也无 BOOT_URL secret"; exit 1
+            fi
+            mkdir -p assets
+            curl -L "${{ secrets.BOOT_URL }}" -o "$BOOT"
+          fi
+          echo "BOOT=$BOOT" >> "$GITHUB_ENV"
+          echo "KERNEL=common/arch/arm64/boot/Image" >> "$GITHUB_ENV"
+
+      - name: Repack boot image (byte-level kernel swap)
+        run: |
+          set -e
+          python3 scripts/repack.py "$BOOT" "$KERNEL" boot_a_droidspaces_v11.img
+          ls -la boot_a_droidspaces_v11.img
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot_a_droidspaces_v11.img
+          path: boot_a_droidspaces_v11.img
+
+      - name: Publish boot img to GitHub Release (永久下载链接，回家电脑可直接下载)
+        if: success()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG=w210ds-v11
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" -y 2>/dev/null || true
+          git -C "$GITHUB_WORKSPACE" push --delete origin "$TAG" 2>/dev/null || true
+          gh release create "$TAG" boot_a_droidspaces_v11.img \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "W210DS Droidspaces boot v11 (full + cgroup cpu/pids limits)" \
+            --notes "v11 = v10 全功能版 + CONFIG_CFS_BANDWIDTH + CONFIG_CGROUP_PIDS（Droidspaces --cpus / --pids-limit）。MODVERSIONS 关闭 + vermagic 保留 modversions 字样，原厂 vendor_dlkm .ko 无 CRC 校验直接加载；已核实 ZTE 源码树无展锐驱动访问 scheduler 内部结构。刷入前请确认设备处于 A/B 安全槽（boot_a）。"
+          echo "RELEASE_URL=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/boot_a_droidspaces_v11.img" >> "$GITHUB_ENV"
+          echo "成品下载地址: $RELEASE_URL"
