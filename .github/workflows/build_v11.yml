@@ -167,7 +167,11 @@ jobs:
           # 配置值全部取自厂商 fragment: arch/arm64/configs/sprd_gki_qogirn6pro.fragment
           # 源码包: assets/unisoc_platform.tar.gz（Kconfig 已去掉 ARCH_SPRD/SPRD_DEBUG/ANDROID_KABI_RESERVE 依赖）
           mkdir -p drivers/unisoc_platform
-          tar xzf ../assets/unisoc_platform.tar.gz -C drivers/unisoc_platform
+          tar xzf ../assets/unisoc_platform.tar.gz -C drivers/
+          # 校验解压结果（tarball 顶层是 unisoc_platform/，-C drivers/ 后应落在 drivers/unisoc_platform/）
+          test -f drivers/unisoc_platform/Kconfig || { echo "ERROR: 模块源码解压失败"; exit 1; }
+          test -f drivers/unisoc_platform/sched/Makefile || { echo "ERROR: sched/Makefile 缺失"; exit 1; }
+          test -f drivers/unisoc_platform/sysdump/Makefile || { echo "ERROR: sysdump/Makefile 缺失"; exit 1; }
           grep -q 'unisoc_platform' drivers/Kconfig || echo 'source "drivers/unisoc_platform/Kconfig"' >> drivers/Kconfig
           scripts/config --module UNISOC_SCHED --module SCHED_WALT \
             --disable UNISOC_GROUP_NO_BOOST \
@@ -200,6 +204,16 @@ jobs:
           touch .scmversion
 
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
+
+          # olddefconfig 后校验模块符号【真实存在】（若 Kconfig 接线/解压失败，
+          # scripts/config 写入的未知符号会被 olddefconfig 静默丢弃，此处兜底）
+          for k in UNISOC_SCHED SCHED_WALT UNISOC_LASTKMSG SPRD_SYSDUMP UNISOC_DUMP_IO SPRD_NATIVE_HANG_MONITOR; do
+            grep -qE "^CONFIG_${k}=m" .config || { echo "ERROR: CONFIG_${k} 未被 Kconfig 识别（源码解压或 Kconfig 接线失败）"; exit 1; }
+          done
+          for k in UNISOC_GROUP_BOOST UNISOC_GROUP_CTL UNISOC_SCHED_VIP_TASK UNISOC_ROTATION_TASK UNISOC_SCHED_PAUSE_CPU UNISOC_CPU_NETLINK UNISOC_HUNG_TASK_ENH UNISOC_INPUT_BOOST UNISOC_WORKAROUND_VRUNTIME_BIG_GAP SPRD_MINI_SYSDUMP SPRD_MODULES_NOTIFY; do
+            grep -qE "^CONFIG_${k}=y" .config || { echo "ERROR: CONFIG_${k} 丢失"; exit 1; }
+          done
+          echo "module symbols validated in .config after olddefconfig"
 
           # === 秒级预检：UTS_RELEASE 必须【逐个符号】等于原厂真串，否则立刻失败，避免白编译 45 分钟 ===
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 include/config/kernel.release
