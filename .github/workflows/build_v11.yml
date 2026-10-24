@@ -172,6 +172,12 @@ jobs:
           test -f drivers/unisoc_platform/Kconfig || { echo "ERROR: 模块源码解压失败"; exit 1; }
           test -f drivers/unisoc_platform/sched/Makefile || { echo "ERROR: sched/Makefile 缺失"; exit 1; }
           test -f drivers/unisoc_platform/sysdump/Makefile || { echo "ERROR: sysdump/Makefile 缺失"; exit 1; }
+          # 厂商私有头文件（GKI 上游 android13-5.15 无此文件，已核实无冲突）：
+          # 部署到内核 include/linux/，与厂商树布局一致，<linux/unisoc_vd_def.h>
+          # 经内核自身 include 路径解析，定义 task_struct->android_vendor_data1 的 overlay 结构
+          test -f drivers/unisoc_platform/kernel_include/unisoc_vd_def.h || { echo "ERROR: kernel_include/unisoc_vd_def.h 缺失（源码包不完整）"; exit 1; }
+          cp drivers/unisoc_platform/kernel_include/unisoc_vd_def.h include/linux/
+          grep -q 'uni_task_struct' include/linux/unisoc_vd_def.h || { echo "ERROR: 头文件部署失败"; exit 1; }
           grep -q 'unisoc_platform' drivers/Kconfig || echo 'source "drivers/unisoc_platform/Kconfig"' >> drivers/Kconfig
           scripts/config --module UNISOC_SCHED --module SCHED_WALT \
             --disable UNISOC_GROUP_NO_BOOST \
