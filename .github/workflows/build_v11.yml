@@ -268,10 +268,14 @@ jobs:
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 M=drivers/unisoc_platform/sysdump modules
           echo "=== built modules ==="
           ls -la drivers/unisoc_platform/sched/unisoc-sched.ko \
-                 drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko
-          # 体积 sanity check（原厂: 440656 / 106912 字节；差太多说明配置与厂商不一致）
+                 drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko \
+                 drivers/unisoc_platform/sysdump/sysdump.ko \
+                 drivers/unisoc_platform/sysdump/native_hang_monitor.ko
+          # 体积 sanity check（原厂: 440656 / 106912 / 183320 / 64336 字节；差太多说明配置与厂商不一致）
           for pair in "drivers/unisoc_platform/sched/unisoc-sched.ko 440656" \
-                      "drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko 106912"; do
+                      "drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko 106912" \
+                      "drivers/unisoc_platform/sysdump/sysdump.ko 183320" \
+                      "drivers/unisoc_platform/sysdump/native_hang_monitor.ko 64336"; do
             set -- $pair
             ko=$1; ref=$2
             sz=$(stat -c %s "$ko")
@@ -284,7 +288,9 @@ jobs:
           # vermagic 必须与原厂字符串整串一致（内核 vermagic 已强制对齐）
           # 模块 .ko 的 .modinfo 里是 "vermagic=5.15.178-..." 形式（带前缀）
           for ko in drivers/unisoc_platform/sched/unisoc-sched.ko \
-                    drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko; do
+                    drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko \
+                    drivers/unisoc_platform/sysdump/sysdump.ko \
+                    drivers/unisoc_platform/sysdump/native_hang_monitor.ko; do
             VM=$(strings "$ko" | grep -m1 '^vermagic=' | sed 's/^vermagic=//' || true)
             if [ -z "$VM" ]; then VM=$(modinfo -F vermagic "$ko" 2>/dev/null || true); fi
             if [ "$VM" != "5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925 SMP preempt mod_unload modversions aarch64" ]; then
@@ -344,6 +350,8 @@ jobs:
           path: |
             common/drivers/unisoc_platform/sched/unisoc-sched.ko
             common/drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko
+            common/drivers/unisoc_platform/sysdump/sysdump.ko
+            common/drivers/unisoc_platform/sysdump/native_hang_monitor.ko
 
       - name: Publish boot img to GitHub Release (永久下载链接，回家电脑可直接下载)
         if: success()
@@ -358,8 +366,10 @@ jobs:
           gh release create "$TAG" boot_a_droidspaces_v11.img \
             common/drivers/unisoc_platform/sched/unisoc-sched.ko \
             common/drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko \
+            common/drivers/unisoc_platform/sysdump/sysdump.ko \
+            common/drivers/unisoc_platform/sysdump/native_hang_monitor.ko \
             --repo "$GITHUB_REPOSITORY" \
             --title "W210DS Droidspaces boot v11 (full + cgroup cpu/pids limits)" \
-            --notes "v11 = v10 全功能版 + CONFIG_CFS_BANDWIDTH + CONFIG_CGROUP_PIDS（Droidspaces --cpus / --pids-limit）。MODVERSIONS 关闭 + vermagic 保留 modversions 字样，原厂 vendor_dlkm .ko 无 CRC 校验直接加载。unisoc-sched.ko / unisoc_last_kmsg.ko 为按新 scheduler 结构体重编的厂商模块，需一并替换进 vendor_boot ramdisk（用 scripts/repack_vendor_boot.py 重打包 vendor_boot_a）。刷入前请确认设备处于 A/B 安全槽（boot_a + vendor_boot_a）。"
+            --notes "v11 = v10 全功能版 + CONFIG_CFS_BANDWIDTH + CONFIG_CGROUP_PIDS（Droidspaces --cpus / --pids-limit）。MODVERSIONS 关闭 + vermagic 保留 modversions 字样，原厂 vendor_dlkm .ko 无 CRC 校验直接加载。unisoc-sched.ko / unisoc_last_kmsg.ko / sysdump.ko / native_hang_monitor.ko 为按新 scheduler 结构体重编的厂商模块，需一并替换进 vendor_boot ramdisk（用 scripts/repack_vendor_boot.py 重打包 vendor_boot_a）。刷入前请确认设备处于 A/B 安全槽（boot_a + vendor_boot_a）。"
           echo "RELEASE_URL=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/boot_a_droidspaces_v11.img" >> "$GITHUB_ENV"
           echo "成品下载地址: $RELEASE_URL"
