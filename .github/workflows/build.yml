@@ -84,18 +84,21 @@ jobs:
           if grep -qE '^CONFIG_LTO_CLANG_THIN=y|^CONFIG_LTO_CLANG_FULL=y' .config; then
             echo "ERROR: LTO 仍未关闭"; grep -E 'CONFIG_LTO' .config; exit 1
           fi
-          # === 关键：让内核 vermagic（UTS_RELEASE）精确匹配原厂 .ko 模块 ===
-          # 目标取自真机 `uname -a`，以及原厂 boot.img 内核二进制中的 VERMAGIC_STRING：
+          # === 关键：让内核 vermagic（UTS_RELEASE）精确匹配原厂 vendor_boot 里的 .ko 模块 ===
+          # 原厂 boot.img 内核二进制里的 VERMAGIC_STRING 是 KERNEL 版本：
           #   "5.15.178-android13-8-00012-g4ea0fcb5d130-ab13530115 SMP preempt mod_unload modversions aarch64"
-          # 内核 utsrelease = $(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)$(LOCALVERSION)
-          # 历史 BUG：早期版本把目标写成了 gb370d3baf5b7-ab20251103.222925（那是【自编译产物自己】的
-          # 版本号，等于拿自己对齐自己），导致 /lib/modules/*.ko insmod 全部 Exec format error、
-          # 存储栈起不来 -> init 找不到 super/metadata/backup -> kernel panic -> A/B 回滚。
-          # 修正后目标为原厂真实串 00012-g4ea0fcb5d130-ab13530115。
+          # 但 vendor_boot 里所有 .ko（含 eMMC 驱动 sdhci_sprd.ko）的 modinfo vermagic 是 MODULE 版本：
+          #   "5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925 SMP preempt mod_unload modversions aarch64"
+          # 两者本就不同（GKI common 提交 4ea0fcb5d130 的 EXTRAVERSION 是 00012，展锐模块树提交
+          # gb370d3baf5b7 的 EXTRAVERSION 是 gb370...）。原厂能开机是因为 sdhci_sprd 已编进内核本体，
+          # 那些 .ko 只是调试/附加集；而我们用的 kernel_common_mirror 没有展锐驱动，必须靠 .ko 起存储栈，
+          # 所以 EXTRAVERSION 必须对齐【模块那串 gb370d3baf5b7】，否则 insmod 一律 Exec format error。
+          # （前 4 次构建全错在这：对齐了 00012 内核串，和 .ko 的 gb370... 永远对不上。）
+          # 实测从 vendor_boot_a.img 解压 ramdisk 扫描到 183 个 .ko，vermagic 唯一且均为 gb370d3baf5b7。
           sed -i -E 's/^VERSION[[:space:]]*=.*/VERSION = 5/' Makefile
           sed -i -E 's/^PATCHLEVEL[[:space:]]*=.*/PATCHLEVEL = 15/' Makefile
           sed -i -E 's/^SUBLEVEL[[:space:]]*=.*/SUBLEVEL = 178/' Makefile
-          sed -i -E 's/^EXTRAVERSION[[:space:]]*=.*/EXTRAVERSION = -android13-8-00012-g4ea0fcb5d130-ab13530115/' Makefile
+          sed -i -E 's/^EXTRAVERSION[[:space:]]*=.*/EXTRAVERSION = -android13-8-gb370d3baf5b7-ab20251103.222925/' Makefile
           # 删掉任何可能追加后缀的 localversion* 文件（排除 .git 目录）
           find . -maxdepth 1 -name 'localversion*' -not -name '*.c' -delete 2>/dev/null || true
           grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL|EXTRAVERSION)' Makefile
@@ -153,7 +156,7 @@ jobs:
           if [ -z "$KR" ]; then
             KR=$(make -s LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 kernelrelease 2>/dev/null | tail -1 || true)
           fi
-          TARGET="5.15.178-android13-8-00012-g4ea0fcb5d130-ab13530115"
+          TARGET="5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925"
           echo "UTS_RELEASE(preflight) = [$KR]"
           echo "TARGET                 = [$TARGET]"
           if [ "$KR" != "$TARGET" ]; then
@@ -181,7 +184,7 @@ jobs:
           ls -la arch/arm64/boot/Image
           echo "=== 校验产物 vermagic 是否精确匹配原厂模块（不匹配则直接构建失败，避免刷出开不了机的镜像）==="
           # 目标须为【整串】匹配：UTS_RELEASE + SMP/preempt/mod_unload/modversions/aarch64
-          VM=$(strings arch/arm64/boot/Image | grep -m1 "^5.15.178-android13-8-00012-g4ea0fcb5d130-ab13530115 SMP preempt mod_unload modversions aarch64$" || true)
+          VM=$(strings arch/arm64/boot/Image | grep -m1 "^5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925 SMP preempt mod_unload modversions aarch64$" || true)
           if [ -z "$VM" ]; then
             echo "ERROR: vermagic 未精确匹配原厂模块，产物不可用（刷入必 panic）"
             echo "实际取到的 UTS_RELEASE 候选："
@@ -229,6 +232,6 @@ jobs:
           gh release create "$TAG" boot_a_droidspaces.img \
             --repo "$GITHUB_REPOSITORY" \
             --title "W210DS Droidspaces boot (latest)" \
-            --notes "内核已补 PID_NS/IPC_NS/SYSVIPC/USER_NS 等命名空间；关闭 MODVERSIONS 的 CRC 校验但保留 vermagic 中的 modversions 字样，使展讯原厂 .ko（含 eMMC 驱动 sdhci_sprd）能正常加载。刷入前请确认设备处于 A/B 安全槽（boot_a）。"
+            --notes "内核已补 PID_NS/IPC_NS/SYSVIPC/USER_NS 等命名空间；EXTRAVERSION 对齐展讯模块树 gb370d3baf5b7（非内核 00012），关闭 MODVERSIONS 的 CRC 校验但保留 vermagic 中的 modversions 字样，使 vendor_boot 里原厂 .ko（含 eMMC 驱动 sdhci_sprd）能正常加载。刷入前请确认设备处于 A/B 安全槽（boot_a）。"
           echo "RELEASE_URL=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/boot_a_droidspaces.img" >> "$GITHUB_ENV"
           echo "成品下载地址: $RELEASE_URL"
