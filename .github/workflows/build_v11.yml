@@ -162,6 +162,35 @@ jobs:
           echo "vermagic.h patched OK"
           if scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
 
+          # === v11: 展讯/展锐厂商模块重编（CFS_BANDWIDTH/CGROUP_PIDS 改变 scheduler 结构体布局，
+          #    原厂按小布局编译的 unisoc-sched.ko / unisoc_last_kmsg.ko 必须重编，否则 bootloop）===
+          # 配置值全部取自厂商 fragment: arch/arm64/configs/sprd_gki_qogirn6pro.fragment
+          # 源码包: assets/unisoc_platform.tar.gz（Kconfig 已去掉 ARCH_SPRD/SPRD_DEBUG/ANDROID_KABI_RESERVE 依赖）
+          mkdir -p drivers/unisoc_platform
+          tar xzf ../assets/unisoc_platform.tar.gz -C drivers/unisoc_platform
+          grep -q 'unisoc_platform' drivers/Kconfig || echo 'source "drivers/unisoc_platform/Kconfig"' >> drivers/Kconfig
+          scripts/config --module UNISOC_SCHED --module SCHED_WALT \
+            --disable UNISOC_GROUP_NO_BOOST \
+            --enable UNISOC_GROUP_CTL --enable UNISOC_GROUP_BOOST \
+            --enable UNISOC_SCHED_VIP_TASK --enable UNISOC_ROTATION_TASK \
+            --enable UNISOC_SCHED_PAUSE_CPU --enable UNISOC_CPU_NETLINK \
+            --enable UNISOC_HUNG_TASK_ENH --enable UNISOC_INPUT_BOOST \
+            --enable UNISOC_WORKAROUND_VRUNTIME_BIG_GAP \
+            --module UNISOC_SCHEDUTIL_GOV --set-val UNISOC_RT_TIMEOUT_DETECT_MS 0 \
+            --module SPRD_SYSDUMP --enable SPRD_MINI_SYSDUMP \
+            --module SPRD_NATIVE_HANG_MONITOR --enable SPRD_MODULES_NOTIFY \
+            --module UNISOC_LASTKMSG --module UNISOC_DUMP_IO
+          echo "--- module configs after wiring ---"
+          for k in UNISOC_SCHED SCHED_WALT UNISOC_GROUP_BOOST UNISOC_GROUP_CTL \
+                   UNISOC_SCHED_VIP_TASK UNISOC_ROTATION_TASK UNISOC_SCHED_PAUSE_CPU \
+                   UNISOC_CPU_NETLINK UNISOC_HUNG_TASK_ENH UNISOC_INPUT_BOOST \
+                   UNISOC_WORKAROUND_VRUNTIME_BIG_GAP UNISOC_SCHEDUTIL_GOV \
+                   UNISOC_RT_TIMEOUT_DETECT_MS SPRD_SYSDUMP SPRD_MINI_SYSDUMP \
+                   SPRD_NATIVE_HANG_MONITOR SPRD_MODULES_NOTIFY UNISOC_LASTKMSG UNISOC_DUMP_IO; do
+            v=$(grep -E "^CONFIG_${k}=|^# CONFIG_${k} is not set" .config | head -1)
+            echo "  $k -> ${v:-NOT_SET}"
+          done
+
           # === 去掉 UTS_RELEASE 尾部的 dirty 标记 "+" （双保险）===
           git config --global --add safe.directory "$PWD" || true
           git config user.email buildbot@example.com || true
@@ -206,6 +235,45 @@ jobs:
             echo "ERROR: CONFIG_MODVERSIONS 未关闭，module_layout CRC 校验会让原厂模块加载失败"; exit 1
           fi
 
+      - name: Build Unisoc vendor modules (v11 scheduler-layout rebuild, 快速失败)
+        run: |
+          set -e
+          export PATH="/usr/lib/llvm-14/bin:$PATH"
+          cd common
+          # 原厂模块按 CFS_BANDWIDTH=n/CGROUP_PIDS=n 的小布局编译；v11 内核布局已变，
+          # 必须用同一份源码 + 厂商 fragment 配置重编，否则 rq/task_group 字段偏移全错 → bootloop
+          # 放在 Image 之前：编译错误几分钟内暴露，不必等 40 分钟内核构建
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 modules_prepare
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 M=drivers/unisoc_platform/sched modules
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 M=drivers/unisoc_platform/sysdump modules
+          echo "=== built modules ==="
+          ls -la drivers/unisoc_platform/sched/unisoc-sched.ko \
+                 drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko
+          # 体积 sanity check（原厂: 440656 / 106912 字节；差太多说明配置与厂商不一致）
+          for pair in "drivers/unisoc_platform/sched/unisoc-sched.ko 440656" \
+                      "drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko 106912"; do
+            set -- $pair
+            ko=$1; ref=$2
+            sz=$(stat -c %s "$ko")
+            lo=$((ref / 2)); hi=$((ref * 2))
+            echo "$ko: $sz bytes (factory ref $ref)"
+            if [ "$sz" -lt "$lo" ] || [ "$sz" -gt "$hi" ]; then
+              echo "ERROR: $ko 体积异常 ($sz)，配置可能与厂商 fragment 不一致"; exit 1
+            fi
+          done
+          # vermagic 必须与原厂字符串整串一致（内核 vermagic 已强制对齐）
+          # 模块 .ko 的 .modinfo 里是 "vermagic=5.15.178-..." 形式（带前缀）
+          for ko in drivers/unisoc_platform/sched/unisoc-sched.ko \
+                    drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko; do
+            VM=$(strings "$ko" | grep -m1 '^vermagic=' | sed 's/^vermagic=//' || true)
+            if [ -z "$VM" ]; then VM=$(modinfo -F vermagic "$ko" 2>/dev/null || true); fi
+            if [ "$VM" != "5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925 SMP preempt mod_unload modversions aarch64" ]; then
+              echo "ERROR: $ko vermagic 与原厂不匹配: [$VM]"; exit 1
+            fi
+            echo "vermagic OK: $VM"
+          done
+          cd ..
+
       - name: Build uncompressed Image (clang-14)
         run: |
           set -e
@@ -249,6 +317,14 @@ jobs:
           name: boot_a_droidspaces_v11.img
           path: boot_a_droidspaces_v11.img
 
+      - name: Upload vendor modules (本地 repack vendor_boot 用)
+        uses: actions/upload-artifact@v4
+        with:
+          name: w210ds_v11_vendor_modules
+          path: |
+            common/drivers/unisoc_platform/sched/unisoc-sched.ko
+            common/drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko
+
       - name: Publish boot img to GitHub Release (永久下载链接，回家电脑可直接下载)
         if: success()
         continue-on-error: true
@@ -260,8 +336,10 @@ jobs:
           gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" -y 2>/dev/null || true
           git -C "$GITHUB_WORKSPACE" push --delete origin "$TAG" 2>/dev/null || true
           gh release create "$TAG" boot_a_droidspaces_v11.img \
+            common/drivers/unisoc_platform/sched/unisoc-sched.ko \
+            common/drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko \
             --repo "$GITHUB_REPOSITORY" \
             --title "W210DS Droidspaces boot v11 (full + cgroup cpu/pids limits)" \
-            --notes "v11 = v10 全功能版 + CONFIG_CFS_BANDWIDTH + CONFIG_CGROUP_PIDS（Droidspaces --cpus / --pids-limit）。MODVERSIONS 关闭 + vermagic 保留 modversions 字样，原厂 vendor_dlkm .ko 无 CRC 校验直接加载；已核实 ZTE 源码树无展锐驱动访问 scheduler 内部结构。刷入前请确认设备处于 A/B 安全槽（boot_a）。"
+            --notes "v11 = v10 全功能版 + CONFIG_CFS_BANDWIDTH + CONFIG_CGROUP_PIDS（Droidspaces --cpus / --pids-limit）。MODVERSIONS 关闭 + vermagic 保留 modversions 字样，原厂 vendor_dlkm .ko 无 CRC 校验直接加载。unisoc-sched.ko / unisoc_last_kmsg.ko 为按新 scheduler 结构体重编的厂商模块，需一并替换进 vendor_boot ramdisk（用 scripts/repack_vendor_boot.py 重打包 vendor_boot_a）。刷入前请确认设备处于 A/B 安全槽（boot_a + vendor_boot_a）。"
           echo "RELEASE_URL=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/boot_a_droidspaces_v11.img" >> "$GITHUB_ENV"
           echo "成品下载地址: $RELEASE_URL"
