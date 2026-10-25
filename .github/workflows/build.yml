@@ -44,12 +44,12 @@ jobs:
           cd "$KS"
           # 用【完整原厂 .config】作基底 (含全部 Unisoc 驱动选项, 确保模块_layout 与原厂内核一致)
           cp ../config/w210ds_full.config .config
-          ../scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
-          ../scripts/config --disable TRIM_UNUSED_KSYMS
+          ./scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
+          ./scripts/config --disable TRIM_UNUSED_KSYMS
           # 开 SYSVIPC (IPC_NS 依赖; 原厂 config 里是 not set)
-          ../scripts/config --enable SYSVIPC
-          ../scripts/config --disable DEBUG_INFO
-          ../scripts/config --enable LD_IS_LLD
+          ./scripts/config --enable SYSVIPC
+          ./scripts/config --disable DEBUG_INFO
+          ./scripts/config --enable LD_IS_LLD
           # 改用 LTO_CLANG_THIN (原厂 FULL 在 7GB runner 会 OOM; THIN 链接内存峰值低得多)
           sed -i -E 's/^CONFIG_LTO_CLANG_FULL=.*/# CONFIG_LTO_CLANG_FULL is not set/; s/^CONFIG_LTO_NONE=.*/# CONFIG_LTO_NONE is not set/' .config
           printf 'CONFIG_LTO_CLANG_THIN=y\n' >> .config
@@ -70,8 +70,8 @@ jobs:
           sed -i -E 's/^EXTRAVERSION[[:space:]]*=.*/EXTRAVERSION = -android13-8-gb370d3baf5b7-ab20251103.222925/' Makefile
           find . -maxdepth 1 -name 'localversion*' -not -name '*.c' -delete 2>/dev/null || true
           grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL|EXTRAVERSION)' Makefile
-          ../scripts/config --disable LOCALVERSION_AUTO
-          ../scripts/config --set-str LOCALVERSION ""
+          ./scripts/config --disable LOCALVERSION_AUTO
+          ./scripts/config --set-str LOCALVERSION ""
           # === SYSVIPC KABI 补丁: 开 IPC_NS 不改 task_struct 布局, 保护原厂 .ko ABI ===
           # 打进 zte-kernel/ 子目录 (--directory), 失败则 patch -p1 兜底, 再不行跳过
           git apply --directory="$KS" ../patches/001.patch 2>/dev/null || \
@@ -80,15 +80,15 @@ jobs:
           # === 应用 V10 + 虚拟化/跨平台 全开清单 (w210ds_virt.config) ===
           echo "--- 应用 w210ds_virt.config ($(grep -cE '^CONFIG_[A-Z0-9_]+=y' ../config/w210ds_virt.config) 项) ---"
           grep -E '^CONFIG_[A-Z0-9_]+=y' ../config/w210ds_virt.config | sed -E 's/^CONFIG_//; s/=y$//' | while read -r s; do
-            ../scripts/config --enable "$s" 2>/dev/null || true
+            ./scripts/config --enable "$s" 2>/dev/null || true
           done
           # 关闭 BTF: CI runner 无 pahole, 强制开会导致构建失败 (BTF 非必需)
-          ../scripts/config --disable DEBUG_INFO_BTF 2>/dev/null || true
+          ./scripts/config --disable DEBUG_INFO_BTF 2>/dev/null || true
           # === 关键修复: 关闭 CRC 校验, 但强行保留 vermagic 里的 "modversions" 字样 ===
           # 新增命名空间等会改变 nsproxy/cred 布局, 原厂 .ko 的 module_layout CRC 对不上;
           # 关 MODVERSIONS 让内核不再做 CRC 校验, 同时保留 "modversions" 字符串使 vermagic 整串全等。
-          ../scripts/config --disable MODVERSIONS
-          ../scripts/config --enable MODULE_UNLOAD
+          ./scripts/config --disable MODVERSIONS
+          ./scripts/config --enable MODULE_UNLOAD
           sed -i 's|#define MODULE_VERMAGIC_MODVERSIONS ""|#define MODULE_VERMAGIC_MODVERSIONS "modversions "|' include/linux/vermagic.h
           echo "--- vermagic.h 校验 ---"
           grep -n "MODULE_VERMAGIC_MODVERSIONS" include/linux/vermagic.h
@@ -96,13 +96,13 @@ jobs:
             echo "ERROR: vermagic.h 改写失败"; exit 1
           fi
           echo "vermagic.h patched OK"
-          if ../scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
+          if ./scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
           # 去掉 UTS_RELEASE 尾部 dirty 标记 "+" (双保险)
           git config --global --add safe.directory "$PWD" || true
           git config user.email buildbot@example.com || true
           git config user.name buildbot || true
-          git add -A "$KS" >/dev/null 2>&1 || true
-          git commit -q -m "ZTE source: virtualization config + vermagic align" >/dev/null 2>&1 || echo "(no changes to commit)"
+          git add -A Makefile include/linux/vermagic.h >/dev/null 2>&1 || true
+          git -c user.email=buildbot@example.com -c user.name=buildbot commit -q -m "ZTE source: virtualization config + vermagic align" >/dev/null 2>&1 || echo "(no changes to commit)"
           touch .scmversion
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
           # === 秒级预检: UTS_RELEASE 必须逐个符号等于原厂真串 ===
