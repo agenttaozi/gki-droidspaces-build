@@ -7,7 +7,10 @@ zte-kernel/drivers/gpu/drm/nouveau/nvkm/subdev/i2c/aux.h
 zte-kernel/include/soc/arc/aux.h
 
 # Documentation is not required to build the Image; skip to shrink the repo.
-zte-kernel/Documentation/
+# Exception: Documentation/Kconfig is sourced by the top-level Kconfig, so it
+# MUST be present or `make olddefconfig` fails. Keep just that one file.
+zte-kernel/Documentation/*
+!zte-kernel/Documentation/Kconfig
 
 # local build logs (untracked helpers)
 add_log.txt
