@@ -1,0 +1,635 @@
+﻿2026-10-25T13:23:31.0106370Z Current runner version: '2.338.0'
+2026-10-25T13:23:31.0134378Z ##[group]Runner Image Provisioner
+2026-10-25T13:23:31.0135344Z Hosted Compute Agent
+2026-10-25T13:23:31.0136098Z Version: 20261021.618
+2026-10-25T13:23:31.0136834Z Commit: 21505ad2541d5be6135ed84fc33697146cf75b8e
+2026-10-25T13:23:31.0137669Z Build Date: 2026-10-21T00:45:21Z
+2026-10-25T13:23:31.0138460Z Worker ID: {4c1f1d2a-bbac-43c7-9e51-108b8640bdc3}
+2026-10-25T13:23:31.0139271Z Region: centralus
+2026-10-25T13:23:31.0139895Z Cloud: Azure
+2026-10-25T13:23:31.0140530Z ##[endgroup]
+2026-10-25T13:23:31.0142499Z ##[group]Operating System
+2026-10-25T13:23:31.0143288Z Ubuntu
+2026-10-25T13:23:31.0144108Z 22.04.5
+2026-10-25T13:23:31.0144684Z LTS
+2026-10-25T13:23:31.0145326Z ##[endgroup]
+2026-10-25T13:23:31.0145964Z ##[group]Runner Image
+2026-10-25T13:23:31.0146686Z Image: ubuntu-22.04
+2026-10-25T13:23:31.0147464Z Version: 20261012.322.1
+2026-10-25T13:23:31.0148996Z Included Software: https://github.com/actions/runner-images/blob/ubuntu22/20261012.322/images/ubuntu/Ubuntu2204-Readme.md
+2026-10-25T13:23:31.0150744Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu22%2F20261012.322
+2026-10-25T13:23:31.0152281Z ##[endgroup]
+2026-10-25T13:23:31.0153719Z ##[group]GITHUB_TOKEN Permissions
+2026-10-25T13:23:31.0156467Z Contents: read
+2026-10-25T13:23:31.0157191Z Metadata: read
+2026-10-25T13:23:31.0157909Z Packages: read
+2026-10-25T13:23:31.0158586Z ##[endgroup]
+2026-10-25T13:23:31.0160825Z Secret source: Actions
+2026-10-25T13:23:31.0161911Z Cache mode: write
+2026-10-25T13:23:31.0163044Z Prepare workflow directory
+2026-10-25T13:23:31.0630880Z Prepare all required actions
+2026-10-25T13:23:31.0690464Z Getting action download info
+2026-10-25T13:23:31.4041744Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-10-25T13:23:32.8864671Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-10-25T13:23:34.2320440Z Complete job name: build
+2026-10-25T13:23:34.2950041Z ##[group]Run actions/checkout@v4
+2026-10-25T13:23:34.2950612Z with:
+2026-10-25T13:23:34.2950970Z   repository: agenttaozi/gki-droidspaces-build
+2026-10-25T13:23:34.2953168Z   token: ***
+2026-10-25T13:23:34.2953491Z   ssh-strict: true
+2026-10-25T13:23:34.2953981Z   ssh-user: git
+2026-10-25T13:23:34.2954324Z   persist-credentials: true
+2026-10-25T13:23:34.2954666Z   clean: true
+2026-10-25T13:23:34.2954961Z   sparse-checkout-cone-mode: true
+2026-10-25T13:23:34.2955338Z   fetch-depth: 1
+2026-10-25T13:23:34.2955677Z   fetch-tags: false
+2026-10-25T13:23:34.2956012Z   show-progress: true
+2026-10-25T13:23:34.2956334Z   lfs: false
+2026-10-25T13:23:34.2956627Z   submodules: false
+2026-10-25T13:23:34.2956980Z   set-safe-directory: true
+2026-10-25T13:23:34.2957317Z   allow-unsafe-pr-checkout: false
+2026-10-25T13:23:34.2957782Z ##[endgroup]
+2026-10-25T13:23:34.4012225Z Syncing repository: agenttaozi/gki-droidspaces-build
+2026-10-25T13:23:34.4014886Z ##[group]Getting Git version info
+2026-10-25T13:23:34.4016405Z Working directory is '/home/runner/work/gki-droidspaces-build/gki-droidspaces-build'
+2026-10-25T13:23:34.4018182Z [command]/usr/bin/git version
+2026-10-25T13:23:34.4255485Z git version 2.55.0
+2026-10-25T13:23:34.4258634Z ##[endgroup]
+2026-10-25T13:23:34.4283770Z Temporarily overriding HOME='/home/runner/work/_temp/a78e7b94-a4e5-4388-bd28-c67d144aaa65' before making global git config changes
+2026-10-25T13:23:34.4286537Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-25T13:23:34.4288104Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/gki-droidspaces-build/gki-droidspaces-build
+2026-10-25T13:23:34.4329176Z Deleting the contents of '/home/runner/work/gki-droidspaces-build/gki-droidspaces-build'
+2026-10-25T13:23:34.4330432Z ##[group]Initializing the repository
+2026-10-25T13:23:34.4331187Z [command]/usr/bin/git init /home/runner/work/gki-droidspaces-build/gki-droidspaces-build
+2026-10-25T13:23:34.4682123Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-25T13:23:34.4683728Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-25T13:23:34.4685298Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-25T13:23:34.4705214Z hint: call:
+2026-10-25T13:23:34.4705842Z hint:
+2026-10-25T13:23:34.4706764Z hint: 	git config --global init.defaultBranch <name>
+2026-10-25T13:23:34.4707670Z hint:
+2026-10-25T13:23:34.4708498Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-25T13:23:34.4709409Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-25T13:23:34.4710387Z hint:
+2026-10-25T13:23:34.4711059Z hint: 	git branch -m <name>
+2026-10-25T13:23:34.4711925Z hint:
+2026-10-25T13:23:34.4712730Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-25T13:23:34.4714309Z Initialized empty Git repository in /home/runner/work/gki-droidspaces-build/gki-droidspaces-build/.git/
+2026-10-25T13:23:34.4718257Z [command]/usr/bin/git remote add origin https://github.com/agenttaozi/gki-droidspaces-build
+2026-10-25T13:23:34.4721922Z ##[endgroup]
+2026-10-25T13:23:34.4722776Z ##[group]Disabling automatic garbage collection
+2026-10-25T13:23:34.4723383Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-25T13:23:34.4798976Z ##[endgroup]
+2026-10-25T13:23:34.4802218Z ##[group]Setting up auth
+2026-10-25T13:23:34.4802929Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-25T13:23:34.4817813Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-25T13:23:34.5585231Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-25T13:23:34.5613278Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-25T13:23:34.5786213Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-25T13:23:34.5811820Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-25T13:23:34.5977571Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-25T13:23:34.6013655Z ##[endgroup]
+2026-10-25T13:23:34.6015280Z ##[group]Fetching the repository
+2026-10-25T13:23:34.6021901Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +328ace0cc8809745e112cfabb65f0c8fe713baed:refs/remotes/origin/main
+2026-10-25T13:23:45.3598505Z From https://github.com/agenttaozi/gki-droidspaces-build
+2026-10-25T13:23:45.3611113Z  * [new ref]             328ace0cc8809745e112cfabb65f0c8fe713baed -> origin/main
+2026-10-25T13:23:45.3617465Z ##[endgroup]
+2026-10-25T13:23:45.3618429Z ##[group]Determining the checkout info
+2026-10-25T13:23:45.3619285Z ##[endgroup]
+2026-10-25T13:23:45.3625152Z [command]/usr/bin/git sparse-checkout disable
+2026-10-25T13:23:45.3629722Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-25T13:23:45.3660631Z ##[group]Checking out the ref
+2026-10-25T13:23:45.3661383Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-10-25T13:23:46.4213478Z Updating files:  20% (13680/66989)
+2026-10-25T13:23:46.4487478Z Updating files:  21% (14068/66989)
+2026-10-25T13:23:46.4762376Z Updating files:  22% (14738/66989)
+2026-10-25T13:23:46.5088280Z Updating files:  23% (15408/66989)
+2026-10-25T13:23:46.5516382Z Updating files:  24% (16078/66989)
+2026-10-25T13:23:46.6030858Z Updating files:  25% (16748/66989)
+2026-10-25T13:23:46.6395355Z Updating files:  26% (17418/66989)
+2026-10-25T13:23:46.6808538Z Updating files:  27% (18088/66989)
+2026-10-25T13:23:46.7204738Z Updating files:  28% (18757/66989)
+2026-10-25T13:23:46.7636461Z Updating files:  29% (19427/66989)
+2026-10-25T13:23:46.8079043Z Updating files:  30% (20097/66989)
+2026-10-25T13:23:46.8526113Z Updating files:  31% (20767/66989)
+2026-10-25T13:23:47.3626662Z Updating files:  32% (21437/66989)
+2026-10-25T13:23:47.4091760Z Updating files:  33% (22107/66989)
+2026-10-25T13:23:47.4151651Z Updating files:  33% (22703/66989)
+2026-10-25T13:23:47.4628451Z Updating files:  34% (22777/66989)
+2026-10-25T13:23:47.4904340Z Updating files:  35% (23447/66989)
+2026-10-25T13:23:47.5142137Z Updating files:  36% (24117/66989)
+2026-10-25T13:23:47.5598313Z Updating files:  37% (24786/66989)
+2026-10-25T13:23:47.5982711Z Updating files:  38% (25456/66989)
+2026-10-25T13:23:47.6448942Z Updating files:  39% (26126/66989)
+2026-10-25T13:23:47.6873406Z Updating files:  40% (26796/66989)
+2026-10-25T13:23:47.7360804Z Updating files:  41% (27466/66989)
+2026-10-25T13:23:47.7786142Z Updating files:  42% (28136/66989)
+2026-10-25T13:23:47.9962011Z Updating files:  43% (28806/66989)
+2026-10-25T13:23:48.0436502Z Updating files:  44% (29476/66989)
+2026-10-25T13:23:48.0891456Z Updating files:  45% (30146/66989)
+2026-10-25T13:23:48.1278201Z Updating files:  46% (30815/66989)
+2026-10-25T13:23:48.1797061Z Updating files:  47% (31485/66989)
+2026-10-25T13:23:48.2413998Z Updating files:  48% (32155/66989)
+2026-10-25T13:23:48.3074988Z Updating files:  49% (32825/66989)
+2026-10-25T13:23:48.3894714Z Updating files:  50% (33495/66989)
+2026-10-25T13:23:48.4101594Z Updating files:  51% (34165/66989)
+2026-10-25T13:23:48.4568376Z Updating files:  51% (34349/66989)
+2026-10-25T13:23:48.5134255Z Updating files:  52% (34835/66989)
+2026-10-25T13:23:48.5702176Z Updating files:  53% (35505/66989)
+2026-10-25T13:23:48.6297725Z Updating files:  54% (36175/66989)
+2026-10-25T13:23:48.6934441Z Updating files:  55% (36844/66989)
+2026-10-25T13:23:48.7909570Z Updating files:  56% (37514/66989)
+2026-10-25T13:23:48.8314721Z Updating files:  57% (38184/66989)
+2026-10-25T13:23:48.8773273Z Updating files:  58% (38854/66989)
+2026-10-25T13:23:48.9367856Z Updating files:  59% (39524/66989)
+2026-10-25T13:23:48.9853158Z Updating files:  60% (40194/66989)
+2026-10-25T13:23:49.0554857Z Updating files:  61% (40864/66989)
+2026-10-25T13:23:49.1247234Z Updating files:  62% (41534/66989)
+2026-10-25T13:23:49.2425171Z Updating files:  63% (42204/66989)
+2026-10-25T13:23:49.2696017Z Updating files:  64% (42873/66989)
+2026-10-25T13:23:49.3127940Z Updating files:  65% (43543/66989)
+2026-10-25T13:23:49.3552923Z Updating files:  66% (44213/66989)
+2026-10-25T13:23:49.3907237Z Updating files:  67% (44883/66989)
+2026-10-25T13:23:49.4110306Z Updating files:  68% (45553/66989)
+2026-10-25T13:23:49.4501189Z Updating files:  68% (45825/66989)
+2026-10-25T13:23:49.4973708Z Updating files:  69% (46223/66989)
+2026-10-25T13:23:49.5414781Z Updating files:  70% (46893/66989)
+2026-10-25T13:23:49.6055446Z Updating files:  71% (47563/66989)
+2026-10-25T13:23:49.6627597Z Updating files:  72% (48233/66989)
+2026-10-25T13:23:49.7163631Z Updating files:  73% (48902/66989)
+2026-10-25T13:23:49.7442351Z Updating files:  74% (49572/66989)
+2026-10-25T13:23:49.7763607Z Updating files:  75% (50242/66989)
+2026-10-25T13:23:49.8051150Z Updating files:  76% (50912/66989)
+2026-10-25T13:23:49.8380602Z Updating files:  77% (51582/66989)
+2026-10-25T13:23:49.9215005Z Updating files:  78% (52252/66989)
+2026-10-25T13:23:49.9497822Z Updating files:  79% (52922/66989)
+2026-10-25T13:23:49.9808400Z Updating files:  80% (53592/66989)
+2026-10-25T13:23:50.0073768Z Updating files:  81% (54262/66989)
+2026-10-25T13:23:50.0436320Z Updating files:  82% (54931/66989)
+2026-10-25T13:23:50.0965253Z Updating files:  83% (55601/66989)
+2026-10-25T13:23:50.1492679Z Updating files:  84% (56271/66989)
+2026-10-25T13:23:50.2056203Z Updating files:  85% (56941/66989)
+2026-10-25T13:23:50.2528974Z Updating files:  86% (57611/66989)
+2026-10-25T13:23:50.2861386Z Updating files:  87% (58281/66989)
+2026-10-25T13:23:50.3182757Z Updating files:  88% (58951/66989)
+2026-10-25T13:23:50.3652560Z Updating files:  89% (59621/66989)
+2026-10-25T13:23:50.4090901Z Updating files:  90% (60291/66989)
+2026-10-25T13:23:50.4236276Z Updating files:  90% (60848/66989)
+2026-10-25T13:23:50.4705158Z Updating files:  91% (60960/66989)
+2026-10-25T13:23:50.4961797Z Updating files:  92% (61630/66989)
+2026-10-25T13:23:50.5320853Z Updating files:  93% (62300/66989)
+2026-10-25T13:23:50.5986776Z Updating files:  94% (62970/66989)
+2026-10-25T13:23:50.8273113Z Updating files:  95% (63640/66989)
+2026-10-25T13:23:50.8465807Z Updating files:  96% (64310/66989)
+2026-10-25T13:23:50.8698172Z Updating files:  97% (64980/66989)
+2026-10-25T13:23:50.8928646Z Updating files:  98% (65650/66989)
+2026-10-25T13:23:50.9148842Z Updating files:  99% (66320/66989)
+2026-10-25T13:23:50.9149910Z Updating files: 100% (66989/66989)
+2026-10-25T13:23:50.9151121Z Updating files: 100% (66989/66989), done.
+2026-10-25T13:23:50.9925114Z Switched to a new branch 'main'
+2026-10-25T13:23:50.9925919Z branch 'main' set up to track 'origin/main'.
+2026-10-25T13:23:50.9987786Z ##[endgroup]
+2026-10-25T13:23:51.0020108Z [command]/usr/bin/git log -1 --format=%H
+2026-10-25T13:23:51.0046062Z 328ace0cc8809745e112cfabb65f0c8fe713baed
+2026-10-25T13:23:51.0267096Z ##[group]Run sudo apt-get update
+2026-10-25T13:23:51.0267538Z [36;1msudo apt-get update[0m
+2026-10-25T13:23:51.0267982Z [36;1msudo apt-get install -y bc bison flex libssl-dev wget python3 git ccache \[0m
+2026-10-25T13:23:51.0268509Z [36;1m  gcc-aarch64-linux-gnu libelf-dev zip curl pkg-config clang-14 lld-14 patch[0m
+2026-10-25T13:23:51.0268998Z [36;1msudo apt-get clean[0m
+2026-10-25T13:23:51.0269300Z [36;1msudo rm -rf /var/lib/apt/lists/*[0m
+2026-10-25T13:23:51.0269667Z [36;1mecho "PATH=/usr/lib/llvm-14/bin:$PATH" >> "$GITHUB_ENV"[0m
+2026-10-25T13:23:51.2456575Z shell: /usr/bin/bash -e {0}
+2026-10-25T13:23:51.2456935Z ##[endgroup]
+2026-10-25T13:23:51.5146750Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-10-25T13:23:51.5871752Z Hit:2 http://azure.archive.ubuntu.com/ubuntu jammy InRelease
+2026-10-25T13:23:51.5884114Z Get:6 https://packages.microsoft.com/ubuntu/22.04/prod jammy InRelease [3632 B]
+2026-10-25T13:23:51.5885832Z Get:3 http://azure.archive.ubuntu.com/ubuntu jammy-updates InRelease [128 kB]
+2026-10-25T13:23:51.5886957Z Get:4 http://azure.archive.ubuntu.com/ubuntu jammy-backports InRelease [127 kB]
+2026-10-25T13:23:51.5895248Z Get:5 http://azure.archive.ubuntu.com/ubuntu jammy-security InRelease [129 kB]
+2026-10-25T13:23:51.7458199Z Get:7 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main amd64 Packages [949 kB]
+2026-10-25T13:23:51.7623324Z Get:8 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main arm64 Packages [687 kB]
+2026-10-25T13:23:51.8460593Z Get:9 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main armhf Packages [23.5 kB]
+2026-10-25T13:23:51.8461501Z Get:10 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages [3909 kB]
+2026-10-25T13:23:51.8896540Z Get:11 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main Translation-en [576 kB]
+2026-10-25T13:23:51.9314949Z Get:12 http://azure.archive.ubuntu.com/ubuntu jammy-updates/universe amd64 Packages [1289 kB]
+2026-10-25T13:23:51.9334803Z Get:13 http://azure.archive.ubuntu.com/ubuntu jammy-updates/universe Translation-en [326 kB]
+2026-10-25T13:23:52.0171673Z Get:14 http://azure.archive.ubuntu.com/ubuntu jammy-security/main amd64 Packages [3643 kB]
+2026-10-25T13:23:52.0783702Z Get:15 http://azure.archive.ubuntu.com/ubuntu jammy-security/main Translation-en [510 kB]
+2026-10-25T13:23:52.0846144Z Get:16 http://azure.archive.ubuntu.com/ubuntu jammy-security/universe amd64 Packages [1055 kB]
+2026-10-25T13:23:52.1169441Z Get:17 http://azure.archive.ubuntu.com/ubuntu jammy-security/universe Translation-en [237 kB]
+2026-10-25T13:24:04.6031613Z Fetched 13.6 MB in 2s (7981 kB/s)
+2026-10-25T13:24:05.8928555Z Reading package lists...
+2026-10-25T13:24:05.9536702Z Reading package lists...
+2026-10-25T13:24:06.1936618Z Building dependency tree...
+2026-10-25T13:24:06.1946285Z Reading state information...
+2026-10-25T13:24:06.3765913Z bc is already the newest version (1.07.1-3build1).
+2026-10-25T13:24:06.3768018Z bc set to manually installed.
+2026-10-25T13:24:06.3769172Z flex is already the newest version (2.6.4-8build2).
+2026-10-25T13:24:06.3770072Z patch is already the newest version (2.7.6-7build2).
+2026-10-25T13:24:06.3771099Z zip is already the newest version (3.0-12build2).
+2026-10-25T13:24:06.3772105Z bison is already the newest version (2:3.8.2+dfsg-1ubuntu0.22.04.1).
+2026-10-25T13:24:06.3773218Z libssl-dev is already the newest version (3.0.2-0ubuntu1.30).
+2026-10-25T13:24:06.3782177Z python3 is already the newest version (3.10.6-1~22.04.1).
+2026-10-25T13:24:06.3783330Z wget is already the newest version (1.21.2-2ubuntu1.5).
+2026-10-25T13:24:06.3784413Z clang-14 is already the newest version (1:14.0.0-1ubuntu1.1).
+2026-10-25T13:24:06.3785174Z lld-14 is already the newest version (1:14.0.0-1ubuntu1.1).
+2026-10-25T13:24:06.3785842Z git is already the newest version (1:2.55.0-0ppa1~ubuntu22.04.2).
+2026-10-25T13:24:06.3786695Z The following additional packages will be installed:
+2026-10-25T13:24:06.3787988Z   binutils-aarch64-linux-gnu cpp-11-aarch64-linux-gnu cpp-aarch64-linux-gnu
+2026-10-25T13:24:06.3788820Z   gcc-11-aarch64-linux-gnu gcc-11-aarch64-linux-gnu-base gcc-11-cross-base
+2026-10-25T13:24:06.3789551Z   gcc-12-cross-base libasan6-arm64-cross libatomic1-arm64-cross
+2026-10-25T13:24:06.3790263Z   libc6-arm64-cross libc6-dev-arm64-cross libcurl4 libgcc-11-dev-arm64-cross
+2026-10-25T13:24:06.3790933Z   libgcc-s1-arm64-cross libgomp1-arm64-cross libhiredis0.14
+2026-10-25T13:24:06.3791587Z   libhwasan0-arm64-cross libitm1-arm64-cross liblsan0-arm64-cross
+2026-10-25T13:24:06.3792305Z   libstdc++6-arm64-cross libtsan0-arm64-cross libubsan1-arm64-cross
+2026-10-25T13:24:06.3792859Z   linux-libc-dev-arm64-cross
+2026-10-25T13:24:06.3793151Z Suggested packages:
+2026-10-25T13:24:06.3793525Z   binutils-doc distcc | icecc gcc-11-locales cpp-doc gcc-11-doc manpages-dev
+2026-10-25T13:24:06.3794167Z   gdb-aarch64-linux-gnu gcc-doc
+2026-10-25T13:24:06.4304800Z The following packages will be REMOVED:
+2026-10-25T13:24:06.4307904Z   pkgconf r-base-dev
+2026-10-25T13:24:06.4308676Z The following NEW packages will be installed:
+2026-10-25T13:24:06.4309585Z   binutils-aarch64-linux-gnu ccache cpp-11-aarch64-linux-gnu
+2026-10-25T13:24:06.4310668Z   cpp-aarch64-linux-gnu gcc-11-aarch64-linux-gnu gcc-11-aarch64-linux-gnu-base
+2026-10-25T13:24:06.4311783Z   gcc-11-cross-base gcc-12-cross-base gcc-aarch64-linux-gnu
+2026-10-25T13:24:06.4312612Z   libasan6-arm64-cross libatomic1-arm64-cross libc6-arm64-cross
+2026-10-25T13:24:06.4313501Z   libc6-dev-arm64-cross libelf-dev libgcc-11-dev-arm64-cross
+2026-10-25T13:24:06.4314720Z   libgcc-s1-arm64-cross libgomp1-arm64-cross libhiredis0.14
+2026-10-25T13:24:06.4315639Z   libhwasan0-arm64-cross libitm1-arm64-cross liblsan0-arm64-cross
+2026-10-25T13:24:06.4316624Z   libstdc++6-arm64-cross libtsan0-arm64-cross libubsan1-arm64-cross
+2026-10-25T13:24:06.4317529Z   linux-libc-dev-arm64-cross pkg-config
+2026-10-25T13:24:06.4318293Z The following packages will be upgraded:
+2026-10-25T13:24:06.4319014Z   curl libcurl4
+2026-10-25T13:24:06.4465895Z 2 upgraded, 26 newly installed, 2 to remove and 86 not upgraded.
+2026-10-25T13:24:06.4466745Z Need to get 47.1 MB of archives.
+2026-10-25T13:24:06.4467654Z After this operation, 157 MB of additional disk space will be used.
+2026-10-25T13:24:06.4468439Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-10-25T13:24:06.5147813Z Get:2 http://azure.archive.ubuntu.com/ubuntu jammy/main amd64 pkg-config amd64 0.29.2-1ubuntu3 [48.2 kB]
+2026-10-25T13:24:06.5540012Z Get:3 http://azure.archive.ubuntu.com/ubuntu jammy/universe amd64 libhiredis0.14 amd64 0.14.1-2 [32.8 kB]
+2026-10-25T13:24:06.5954688Z Get:4 http://azure.archive.ubuntu.com/ubuntu jammy/universe amd64 ccache amd64 4.5.1-1 [495 kB]
+2026-10-25T13:24:06.6288539Z Get:5 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 gcc-11-aarch64-linux-gnu-base amd64 11.4.0-1ubuntu1~22.04.3cross1 [216 kB]
+2026-10-25T13:24:06.6635791Z Get:6 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 cpp-11-aarch64-linux-gnu amd64 11.4.0-1ubuntu1~22.04.3cross1 [9421 kB]
+2026-10-25T13:24:06.8638994Z Get:7 http://azure.archive.ubuntu.com/ubuntu jammy/main amd64 cpp-aarch64-linux-gnu amd64 4:11.2.0-1ubuntu1 [3478 B]
+2026-10-25T13:24:06.8978427Z Get:8 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 curl amd64 7.81.0-1ubuntu1.30 [194 kB]
+2026-10-25T13:24:06.9399303Z Get:9 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libcurl4 amd64 7.81.0-1ubuntu1.30 [293 kB]
+2026-10-25T13:24:06.9989314Z Get:10 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 binutils-aarch64-linux-gnu amd64 2.38-4ubuntu2.12 [3624 kB]
+2026-10-25T13:24:07.0592782Z Get:11 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 gcc-11-cross-base all 11.4.0-1ubuntu1~22.04.3cross1 [211 kB]
+2026-10-25T13:24:07.1495418Z Get:12 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 gcc-12-cross-base all 12.3.0-1ubuntu1~22.04.3cross1 [211 kB]
+2026-10-25T13:24:07.1941672Z Get:13 http://azure.archive.ubuntu.com/ubuntu jammy/main amd64 libc6-arm64-cross all 2.35-0ubuntu1cross3 [1147 kB]
+2026-10-25T13:24:07.2480817Z Get:14 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libgcc-s1-arm64-cross all 12.3.0-1ubuntu1~22.04.3cross1 [39.8 kB]
+2026-10-25T13:24:07.2870319Z Get:15 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libgomp1-arm64-cross all 12.3.0-1ubuntu1~22.04.3cross1 [122 kB]
+2026-10-25T13:24:07.3203671Z Get:16 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libitm1-arm64-cross all 12.3.0-1ubuntu1~22.04.3cross1 [28.1 kB]
+2026-10-25T13:24:07.3535226Z Get:17 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libatomic1-arm64-cross all 12.3.0-1ubuntu1~22.04.3cross1 [10.6 kB]
+2026-10-25T13:24:07.3875491Z Get:18 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libasan6-arm64-cross all 11.4.0-1ubuntu1~22.04.3cross1 [2226 kB]
+2026-10-25T13:24:07.4835259Z Get:19 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 liblsan0-arm64-cross all 12.3.0-1ubuntu1~22.04.3cross1 [1037 kB]
+2026-10-25T13:24:07.5227412Z Get:20 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libtsan0-arm64-cross all 11.4.0-1ubuntu1~22.04.3cross1 [2232 kB]
+2026-10-25T13:24:07.6027124Z Get:21 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libstdc++6-arm64-cross all 12.3.0-1ubuntu1~22.04.3cross1 [616 kB]
+2026-10-25T13:24:07.6617949Z Get:22 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libubsan1-arm64-cross all 12.3.0-1ubuntu1~22.04.3cross1 [966 kB]
+2026-10-25T13:24:07.7140959Z Get:23 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libhwasan0-arm64-cross all 12.3.0-1ubuntu1~22.04.3cross1 [1119 kB]
+2026-10-25T13:24:07.7623017Z Get:24 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libgcc-11-dev-arm64-cross all 11.4.0-1ubuntu1~22.04.3cross1 [1145 kB]
+2026-10-25T13:24:07.8074027Z Get:25 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 gcc-11-aarch64-linux-gnu amd64 11.4.0-1ubuntu1~22.04.3cross1 [18.8 MB]
+2026-10-25T13:24:08.1723403Z Get:26 http://azure.archive.ubuntu.com/ubuntu jammy/main amd64 gcc-aarch64-linux-gnu amd64 4:11.2.0-1ubuntu1 [1242 B]
+2026-10-25T13:24:08.2195369Z Get:27 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libelf-dev amd64 0.186-1ubuntu0.1 [64.4 kB]
+2026-10-25T13:24:08.2532802Z Get:28 http://azure.archive.ubuntu.com/ubuntu jammy/main amd64 linux-libc-dev-arm64-cross all 5.15.0-22.22cross3 [1216 kB]
+2026-10-25T13:24:08.2988116Z Get:29 http://azure.archive.ubuntu.com/ubuntu jammy/main amd64 libc6-dev-arm64-cross all 2.35-0ubuntu1cross3 [1546 kB]
+2026-10-25T13:24:08.7170571Z Fetched 47.1 MB in 2s (25.0 MB/s)
+2026-10-25T13:24:08.8019184Z (Reading database ... 
+2026-10-25T13:24:08.8019874Z (Reading database ... 5%
+2026-10-25T13:24:08.8020415Z (Reading database ... 10%
+2026-10-25T13:24:08.8020762Z (Reading database ... 15%
+2026-10-25T13:24:08.8021481Z (Reading database ... 20%
+2026-10-25T13:24:08.8021923Z (Reading database ... 25%
+2026-10-25T13:24:08.8022233Z (Reading database ... 30%
+2026-10-25T13:24:08.8022582Z (Reading database ... 35%
+2026-10-25T13:24:08.8022915Z (Reading database ... 40%
+2026-10-25T13:24:08.8023293Z (Reading database ... 45%
+2026-10-25T13:24:08.8023623Z (Reading database ... 50%
+2026-10-25T13:24:09.1600275Z (Reading database ... 55%
+2026-10-25T13:24:09.6575549Z (Reading database ... 60%
+2026-10-25T13:24:10.1858605Z (Reading database ... 65%
+2026-10-25T13:24:10.6237005Z (Reading database ... 70%
+2026-10-25T13:24:11.3308720Z (Reading database ... 75%
+2026-10-25T13:24:12.0832513Z (Reading database ... 80%
+2026-10-25T13:24:12.8368005Z (Reading database ... 85%
+2026-10-25T13:24:13.6904103Z (Reading database ... 90%
+2026-10-25T13:24:14.3683710Z (Reading database ... 95%
+2026-10-25T13:24:14.3684696Z (Reading database ... 100%
+2026-10-25T13:24:14.3685910Z (Reading database ... 261641 files and directories currently installed.)
+2026-10-25T13:24:14.3743592Z Removing r-base-dev (4.6.1-6.2204.0) ...
+2026-10-25T13:24:14.4985494Z dpkg: pkgconf: dependency problems, but removing anyway as you requested:
+2026-10-25T13:24:14.5005498Z  php8.1-dev depends on pkg-config; however:
+2026-10-25T13:24:14.5015187Z   Package pkg-config is not installed.
+2026-10-25T13:24:14.5015949Z   Package pkgconf which provides pkg-config is to be removed.
+2026-10-25T13:24:14.5016963Z  mono-devel depends on pkg-config; however:
+2026-10-25T13:24:14.5017639Z   Package pkg-config is not installed.
+2026-10-25T13:24:14.5018394Z   Package pkgconf which provides pkg-config is to be removed.
+2026-10-25T13:24:14.5019240Z  libmagickwand-6.q16-dev:amd64 depends on pkg-config; however:
+2026-10-25T13:24:14.5020017Z   Package pkg-config is not installed.
+2026-10-25T13:24:14.5020809Z   Package pkgconf which provides pkg-config is to be removed.
+2026-10-25T13:24:14.5021574Z  libmagickcore-6.q16-dev:amd64 depends on pkg-config; however:
+2026-10-25T13:24:14.5022278Z   Package pkg-config is not installed.
+2026-10-25T13:24:14.5022968Z   Package pkgconf which provides pkg-config is to be removed.
+2026-10-25T13:24:14.5023699Z  libglib2.0-dev:amd64 depends on pkg-config; however:
+2026-10-25T13:24:14.5024551Z   Package pkg-config is not installed.
+2026-10-25T13:24:14.5025366Z   Package pkgconf which provides pkg-config is to be removed.
+2026-10-25T13:24:14.5026134Z  libfontconfig-dev:amd64 depends on pkg-config; however:
+2026-10-25T13:24:14.5026766Z   Package pkg-config is not installed.
+2026-10-25T13:24:14.5027392Z   Package pkgconf which provides pkg-config is to be removed.
+2026-10-25T13:24:14.5027930Z 
+2026-10-25T13:24:14.5039881Z Removing pkgconf (1.8.0-1) ...
+2026-10-25T13:24:14.6412366Z Removing 'diversion of /usr/bin/pkg-config to /usr/bin/pkg-config.real by pkgconf'
+2026-10-25T13:24:14.6526355Z Removing 'diversion of /usr/share/aclocal/pkg.m4 to /usr/share/aclocal/pkg.real.m4 by pkgconf'
+2026-10-25T13:24:14.6625987Z Removing 'diversion of /usr/share/man/man1/pkg-config.1.gz to /usr/share/man/man1/pkg-config.real.1.gz by pkgconf'
+2026-10-25T13:24:14.6731818Z Removing 'diversion of /usr/share/pkg-config-crosswrapper to /usr/share/pkg-config-crosswrapper.real by pkgconf'
+2026-10-25T13:24:14.7368086Z Selecting previously unselected package pkg-config.
+2026-10-25T13:24:14.7405428Z (Reading database ... 
+2026-10-25T13:24:14.7405959Z (Reading database ... 5%
+2026-10-25T13:24:14.7406497Z (Reading database ... 10%
+2026-10-25T13:24:14.7406938Z (Reading database ... 15%
+2026-10-25T13:24:14.7407366Z (Reading database ... 20%
+2026-10-25T13:24:14.7407791Z (Reading database ... 25%
+2026-10-25T13:24:14.7408182Z (Reading database ... 30%
+2026-10-25T13:24:14.7408571Z (Reading database ... 35%
+2026-10-25T13:24:14.7409049Z (Reading database ... 40%
+2026-10-25T13:24:14.7409458Z (Reading database ... 45%
+2026-10-25T13:24:14.7409853Z (Reading database ... 50%
+2026-10-25T13:24:14.7429925Z (Reading database ... 55%
+2026-10-25T13:24:14.7464986Z (Reading database ... 60%
+2026-10-25T13:24:14.7483910Z (Reading database ... 65%
+2026-10-25T13:24:14.7484953Z (Reading database ... 70%
+2026-10-25T13:24:14.7644723Z (Reading database ... 75%
+2026-10-25T13:24:14.7749292Z (Reading database ... 80%
+2026-10-25T13:24:14.7927902Z (Reading database ... 85%
+2026-10-25T13:24:14.8139166Z (Reading database ... 90%
+2026-10-25T13:24:14.8222564Z (Reading database ... 95%
+2026-10-25T13:24:14.8223649Z (Reading database ... 100%
+2026-10-25T13:24:14.8232866Z (Reading database ... 261619 files and directories currently installed.)
+2026-10-25T13:24:14.8274385Z Preparing to unpack .../00-pkg-config_0.29.2-1ubuntu3_amd64.deb ...
+2026-10-25T13:24:14.8282432Z Unpacking pkg-config (0.29.2-1ubuntu3) ...
+2026-10-25T13:24:14.8476059Z Selecting previously unselected package libhiredis0.14:amd64.
+2026-10-25T13:24:14.8601779Z Preparing to unpack .../01-libhiredis0.14_0.14.1-2_amd64.deb ...
+2026-10-25T13:24:14.8618548Z Unpacking libhiredis0.14:amd64 (0.14.1-2) ...
+2026-10-25T13:24:14.8825877Z Selecting previously unselected package ccache.
+2026-10-25T13:24:14.8960213Z Preparing to unpack .../02-ccache_4.5.1-1_amd64.deb ...
+2026-10-25T13:24:14.8974226Z Unpacking ccache (4.5.1-1) ...
+2026-10-25T13:24:14.9305343Z Selecting previously unselected package gcc-11-aarch64-linux-gnu-base:amd64.
+2026-10-25T13:24:14.9420909Z Preparing to unpack .../03-gcc-11-aarch64-linux-gnu-base_11.4.0-1ubuntu1~22.04.3cross1_amd64.deb ...
+2026-10-25T13:24:14.9431283Z Unpacking gcc-11-aarch64-linux-gnu-base:amd64 (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:14.9653480Z Selecting previously unselected package cpp-11-aarch64-linux-gnu.
+2026-10-25T13:24:14.9781721Z Preparing to unpack .../04-cpp-11-aarch64-linux-gnu_11.4.0-1ubuntu1~22.04.3cross1_amd64.deb ...
+2026-10-25T13:24:14.9809208Z Unpacking cpp-11-aarch64-linux-gnu (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:15.3845917Z Selecting previously unselected package cpp-aarch64-linux-gnu.
+2026-10-25T13:24:15.3971655Z Preparing to unpack .../05-cpp-aarch64-linux-gnu_4%3a11.2.0-1ubuntu1_amd64.deb ...
+2026-10-25T13:24:15.3980652Z Unpacking cpp-aarch64-linux-gnu (4:11.2.0-1ubuntu1) ...
+2026-10-25T13:24:15.4278615Z Preparing to unpack .../06-curl_7.81.0-1ubuntu1.30_amd64.deb ...
+2026-10-25T13:24:15.4302104Z Unpacking curl (7.81.0-1ubuntu1.30) over (7.81.0-1ubuntu1.29) ...
+2026-10-25T13:24:15.4739274Z Preparing to unpack .../07-libcurl4_7.81.0-1ubuntu1.30_amd64.deb ...
+2026-10-25T13:24:15.4813468Z Unpacking libcurl4:amd64 (7.81.0-1ubuntu1.30) over (7.81.0-1ubuntu1.29) ...
+2026-10-25T13:24:15.5080474Z Selecting previously unselected package binutils-aarch64-linux-gnu.
+2026-10-25T13:24:15.5229851Z Preparing to unpack .../08-binutils-aarch64-linux-gnu_2.38-4ubuntu2.12_amd64.deb ...
+2026-10-25T13:24:15.5237460Z Unpacking binutils-aarch64-linux-gnu (2.38-4ubuntu2.12) ...
+2026-10-25T13:24:15.8656532Z Selecting previously unselected package gcc-11-cross-base.
+2026-10-25T13:24:15.8805128Z Preparing to unpack .../09-gcc-11-cross-base_11.4.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:15.8813746Z Unpacking gcc-11-cross-base (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:15.8992780Z Selecting previously unselected package gcc-12-cross-base.
+2026-10-25T13:24:15.9137667Z Preparing to unpack .../10-gcc-12-cross-base_12.3.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:15.9147598Z Unpacking gcc-12-cross-base (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:15.9326539Z Selecting previously unselected package libc6-arm64-cross.
+2026-10-25T13:24:15.9470556Z Preparing to unpack .../11-libc6-arm64-cross_2.35-0ubuntu1cross3_all.deb ...
+2026-10-25T13:24:15.9477585Z Unpacking libc6-arm64-cross (2.35-0ubuntu1cross3) ...
+2026-10-25T13:24:16.0032272Z Selecting previously unselected package libgcc-s1-arm64-cross.
+2026-10-25T13:24:16.0200693Z Preparing to unpack .../12-libgcc-s1-arm64-cross_12.3.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:16.0209806Z Unpacking libgcc-s1-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:16.0368863Z Selecting previously unselected package libgomp1-arm64-cross.
+2026-10-25T13:24:16.0515000Z Preparing to unpack .../13-libgomp1-arm64-cross_12.3.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:16.0525648Z Unpacking libgomp1-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:16.0718775Z Selecting previously unselected package libitm1-arm64-cross.
+2026-10-25T13:24:16.0862542Z Preparing to unpack .../14-libitm1-arm64-cross_12.3.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:16.0872386Z Unpacking libitm1-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:16.1037166Z Selecting previously unselected package libatomic1-arm64-cross.
+2026-10-25T13:24:16.1183762Z Preparing to unpack .../15-libatomic1-arm64-cross_12.3.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:16.1192326Z Unpacking libatomic1-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:16.1341702Z Selecting previously unselected package libasan6-arm64-cross.
+2026-10-25T13:24:16.1482108Z Preparing to unpack .../16-libasan6-arm64-cross_11.4.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:16.1488672Z Unpacking libasan6-arm64-cross (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:16.2593739Z Selecting previously unselected package liblsan0-arm64-cross.
+2026-10-25T13:24:16.2746658Z Preparing to unpack .../17-liblsan0-arm64-cross_12.3.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:16.2756256Z Unpacking liblsan0-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:16.3326629Z Selecting previously unselected package libtsan0-arm64-cross.
+2026-10-25T13:24:16.3472307Z Preparing to unpack .../18-libtsan0-arm64-cross_11.4.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:16.3482198Z Unpacking libtsan0-arm64-cross (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:16.4640962Z Selecting previously unselected package libstdc++6-arm64-cross.
+2026-10-25T13:24:16.4791798Z Preparing to unpack .../19-libstdc++6-arm64-cross_12.3.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:16.4806889Z Unpacking libstdc++6-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:16.5255022Z Selecting previously unselected package libubsan1-arm64-cross.
+2026-10-25T13:24:16.5381549Z Preparing to unpack .../20-libubsan1-arm64-cross_12.3.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:16.5396779Z Unpacking libubsan1-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:16.5916237Z Selecting previously unselected package libhwasan0-arm64-cross.
+2026-10-25T13:24:16.6053628Z Preparing to unpack .../21-libhwasan0-arm64-cross_12.3.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:16.6061809Z Unpacking libhwasan0-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:16.6629522Z Selecting previously unselected package libgcc-11-dev-arm64-cross.
+2026-10-25T13:24:16.6774491Z Preparing to unpack .../22-libgcc-11-dev-arm64-cross_11.4.0-1ubuntu1~22.04.3cross1_all.deb ...
+2026-10-25T13:24:16.6783706Z Unpacking libgcc-11-dev-arm64-cross (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:16.8131292Z Selecting previously unselected package gcc-11-aarch64-linux-gnu.
+2026-10-25T13:24:16.8276932Z Preparing to unpack .../23-gcc-11-aarch64-linux-gnu_11.4.0-1ubuntu1~22.04.3cross1_amd64.deb ...
+2026-10-25T13:24:16.8303653Z Unpacking gcc-11-aarch64-linux-gnu (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:17.5517113Z Selecting previously unselected package gcc-aarch64-linux-gnu.
+2026-10-25T13:24:17.5650716Z Preparing to unpack .../24-gcc-aarch64-linux-gnu_4%3a11.2.0-1ubuntu1_amd64.deb ...
+2026-10-25T13:24:17.5660462Z Unpacking gcc-aarch64-linux-gnu (4:11.2.0-1ubuntu1) ...
+2026-10-25T13:24:17.5820804Z Selecting previously unselected package libelf-dev:amd64.
+2026-10-25T13:24:17.5961938Z Preparing to unpack .../25-libelf-dev_0.186-1ubuntu0.1_amd64.deb ...
+2026-10-25T13:24:17.5968962Z Unpacking libelf-dev:amd64 (0.186-1ubuntu0.1) ...
+2026-10-25T13:24:17.6359433Z Selecting previously unselected package linux-libc-dev-arm64-cross.
+2026-10-25T13:24:17.6501385Z Preparing to unpack .../26-linux-libc-dev-arm64-cross_5.15.0-22.22cross3_all.deb ...
+2026-10-25T13:24:17.6510946Z Unpacking linux-libc-dev-arm64-cross (5.15.0-22.22cross3) ...
+2026-10-25T13:24:18.0492028Z Selecting previously unselected package libc6-dev-arm64-cross.
+2026-10-25T13:24:18.0643222Z Preparing to unpack .../27-libc6-dev-arm64-cross_2.35-0ubuntu1cross3_all.deb ...
+2026-10-25T13:24:18.0652272Z Unpacking libc6-dev-arm64-cross (2.35-0ubuntu1cross3) ...
+2026-10-25T13:24:18.3669526Z Setting up gcc-11-aarch64-linux-gnu-base:amd64 (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.3698536Z Setting up gcc-12-cross-base (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.3719622Z Setting up binutils-aarch64-linux-gnu (2.38-4ubuntu2.12) ...
+2026-10-25T13:24:18.3740032Z Setting up libc6-arm64-cross (2.35-0ubuntu1cross3) ...
+2026-10-25T13:24:18.3760512Z Setting up libelf-dev:amd64 (0.186-1ubuntu0.1) ...
+2026-10-25T13:24:18.3779853Z Setting up pkg-config (0.29.2-1ubuntu3) ...
+2026-10-25T13:24:18.4046169Z Setting up libitm1-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4063742Z Setting up linux-libc-dev-arm64-cross (5.15.0-22.22cross3) ...
+2026-10-25T13:24:18.4080802Z Setting up cpp-11-aarch64-linux-gnu (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4097763Z Setting up gcc-11-cross-base (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4117498Z Setting up libcurl4:amd64 (7.81.0-1ubuntu1.30) ...
+2026-10-25T13:24:18.4138018Z Setting up curl (7.81.0-1ubuntu1.30) ...
+2026-10-25T13:24:18.4155401Z Setting up libhiredis0.14:amd64 (0.14.1-2) ...
+2026-10-25T13:24:18.4175493Z Setting up libgcc-s1-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4197318Z Setting up libatomic1-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4215186Z Setting up liblsan0-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4233121Z Setting up libgomp1-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4251135Z Setting up libasan6-arm64-cross (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4269570Z Setting up ccache (4.5.1-1) ...
+2026-10-25T13:24:18.4289388Z Updating symlinks in /usr/lib/ccache ...
+2026-10-25T13:24:18.4461898Z Setting up libtsan0-arm64-cross (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4479423Z Setting up libhwasan0-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4499811Z Setting up libc6-dev-arm64-cross (2.35-0ubuntu1cross3) ...
+2026-10-25T13:24:18.4519306Z Setting up libstdc++6-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4537149Z Setting up cpp-aarch64-linux-gnu (4:11.2.0-1ubuntu1) ...
+2026-10-25T13:24:18.4554501Z Setting up libubsan1-arm64-cross (12.3.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4573172Z Setting up libgcc-11-dev-arm64-cross (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4591441Z Setting up gcc-11-aarch64-linux-gnu (11.4.0-1ubuntu1~22.04.3cross1) ...
+2026-10-25T13:24:18.4610200Z Setting up gcc-aarch64-linux-gnu (4:11.2.0-1ubuntu1) ...
+2026-10-25T13:24:18.4634840Z Processing triggers for man-db (2.10.2-1) ...
+2026-10-25T13:24:18.4652389Z Not building database; man-db/auto-update is not 'true'.
+2026-10-25T13:24:18.4665596Z Processing triggers for libc-bin (2.35-0ubuntu3.15) ...
+2026-10-25T13:24:30.7344803Z 
+2026-10-25T13:24:30.7355285Z Running kernel seems to be up-to-date.
+2026-10-25T13:24:30.7355767Z 
+2026-10-25T13:24:30.7355936Z Services to be restarted:
+2026-10-25T13:24:30.7381012Z  systemctl restart php8.1-fpm.service
+2026-10-25T13:24:30.7381518Z 
+2026-10-25T13:24:30.7382306Z No containers need to be restarted.
+2026-10-25T13:24:30.7382657Z 
+2026-10-25T13:24:30.7383033Z No user sessions are running outdated binaries.
+2026-10-25T13:24:30.7383393Z 
+2026-10-25T13:24:30.7384024Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+2026-10-25T13:24:32.1591266Z ##[group]Run set -e
+2026-10-25T13:24:32.1591606Z [36;1mset -e[0m
+2026-10-25T13:24:32.1591900Z [36;1mclang-14 --version | head -1[0m
+2026-10-25T13:24:32.1592210Z [36;1mld.lld-14 --version | head -1[0m
+2026-10-25T13:24:32.1592563Z [36;1mecho "CLANG_CC=clang-14" >> "$GITHUB_ENV"[0m
+2026-10-25T13:24:32.1593089Z [36;1mecho "CLANG_LD=ld.lld-14" >> "$GITHUB_ENV"[0m
+2026-10-25T13:24:32.1629943Z shell: /usr/bin/bash -e {0}
+2026-10-25T13:24:32.1630278Z env:
+2026-10-25T13:24:32.1631218Z   PATH: /usr/lib/llvm-14/bin:/snap/bin:/home/runner/.local/bin:/opt/pipx_bin:/home/runner/.cargo/bin:/home/runner/.config/composer/vendor/bin:/usr/local/.ghcup/bin:/home/runner/.dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+2026-10-25T13:24:32.1632171Z ##[endgroup]
+2026-10-25T13:24:32.2422849Z Ubuntu clang version 14.0.0-1ubuntu1.1
+2026-10-25T13:24:32.3259834Z Ubuntu LLD 14.0.0 (compatible with GNU linkers)
+2026-10-25T13:24:32.3327770Z ##[group]Run set -e
+2026-10-25T13:24:32.3328243Z [36;1mset -e[0m
+2026-10-25T13:24:32.3328500Z [36;1mKS="zte-kernel"[0m
+2026-10-25T13:24:32.3328771Z [36;1mcd "$KS"[0m
+2026-10-25T13:24:32.3329203Z [36;1m# Git-for-Windows 推送时丢失 +x 位, 在 Linux runner 上 ./scripts/config 报 Permission denied[0m
+2026-10-25T13:24:32.3329744Z [36;1mchmod +x ./scripts/config ./scripts/*.pl 2>/dev/null || true[0m
+2026-10-25T13:24:32.3330212Z [36;1m# 用【完整原厂 .config】作基底 (含全部 Unisoc 驱动选项, 确保模块_layout 与原厂内核一致)[0m
+2026-10-25T13:24:32.3330579Z [36;1mcp ../config/w210ds_full.config .config[0m
+2026-10-25T13:24:32.3330951Z [36;1m./scripts/config --set-str UNUSED_KSYMS_WHITELIST ""[0m
+2026-10-25T13:24:32.3331332Z [36;1m./scripts/config --disable TRIM_UNUSED_KSYMS[0m
+2026-10-25T13:24:32.3331686Z [36;1m# 开 SYSVIPC (IPC_NS 依赖; 原厂 config 里是 not set)[0m
+2026-10-25T13:24:32.3332043Z [36;1m./scripts/config --enable SYSVIPC[0m
+2026-10-25T13:24:32.3332394Z [36;1m./scripts/config --disable DEBUG_INFO[0m
+2026-10-25T13:24:32.3333128Z [36;1m./scripts/config --enable LD_IS_LLD[0m
+2026-10-25T13:24:32.3333538Z [36;1m# 改用 LTO_CLANG_THIN (原厂 FULL 在 7GB runner 会 OOM; THIN 链接内存峰值低得多)[0m
+2026-10-25T13:24:32.3334509Z [36;1msed -i -E 's/^CONFIG_LTO_CLANG_FULL=.*/# CONFIG_LTO_CLANG_FULL is not set/; s/^CONFIG_LTO_NONE=.*/# CONFIG_LTO_NONE is not set/' .config[0m
+2026-10-25T13:24:32.3335086Z [36;1mprintf 'CONFIG_LTO_CLANG_THIN=y\n' >> .config[0m
+2026-10-25T13:24:32.3335481Z [36;1mmake LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig[0m
+2026-10-25T13:24:32.3335888Z [36;1mif grep -qE '^CONFIG_LTO_CLANG_FULL=y' .config; then[0m
+2026-10-25T13:24:32.3336316Z [36;1m  echo "ERROR: LTO_CLANG_FULL 仍存在(会 OOM)"; grep -E 'CONFIG_LTO' .config; exit 1[0m
+2026-10-25T13:24:32.3336747Z [36;1mfi[0m
+2026-10-25T13:24:32.3337046Z [36;1mif ! grep -qE '^CONFIG_LTO_CLANG_THIN=y' .config; then[0m
+2026-10-25T13:24:32.3337481Z [36;1m  echo "ERROR: LTO_CLANG_THIN 未启用"; grep -E 'CONFIG_LTO' .config; exit 1[0m
+2026-10-25T13:24:32.3337864Z [36;1mfi[0m
+2026-10-25T13:24:32.3338151Z [36;1m# === 关键: UTS_RELEASE 精确匹配原厂 vendor_boot 里的 .ko 模块 ===[0m
+2026-10-25T13:24:32.3338480Z [36;1m# 模块 vermagic 唯一且均为:[0m
+2026-10-25T13:24:32.3338963Z [36;1m#   "5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925 SMP preempt mod_unload modversions aarch64"[0m
+2026-10-25T13:24:32.3339536Z [36;1m# 中兴开源树 EXTRAVERSION 为空, 这里强制对齐模块那串 gb370d3baf5b7。[0m
+2026-10-25T13:24:32.3339941Z [36;1msed -i -E 's/^VERSION[[:space:]]*=.*/VERSION = 5/' Makefile[0m
+2026-10-25T13:24:32.3340379Z [36;1msed -i -E 's/^PATCHLEVEL[[:space:]]*=.*/PATCHLEVEL = 15/' Makefile[0m
+2026-10-25T13:24:32.3340790Z [36;1msed -i -E 's/^SUBLEVEL[[:space:]]*=.*/SUBLEVEL = 178/' Makefile[0m
+2026-10-25T13:24:32.3341364Z [36;1msed -i -E 's/^EXTRAVERSION[[:space:]]*=.*/EXTRAVERSION = -android13-8-gb370d3baf5b7-ab20251103.222925/' Makefile[0m
+2026-10-25T13:24:32.3341952Z [36;1mfind . -maxdepth 1 -name 'localversion*' -not -name '*.c' -delete 2>/dev/null || true[0m
+2026-10-25T13:24:32.3342503Z [36;1mgrep -E '^(VERSION|PATCHLEVEL|SUBLEVEL|EXTRAVERSION)' Makefile[0m
+2026-10-25T13:24:32.3342914Z [36;1m./scripts/config --disable LOCALVERSION_AUTO[0m
+2026-10-25T13:24:32.3343257Z [36;1m./scripts/config --set-str LOCALVERSION ""[0m
+2026-10-25T13:24:32.3343685Z [36;1m# === SYSVIPC KABI 补丁: 开 IPC_NS 不改 task_struct 布局, 保护原厂 .ko ABI ===[0m
+2026-10-25T13:24:32.3344559Z [36;1m# 打进 zte-kernel/ 子目录 (--directory), 失败则 patch -p1 兜底, 再不行跳过[0m
+2026-10-25T13:24:32.3345005Z [36;1mgit apply --directory="$KS" ../patches/001.patch 2>/dev/null || \[0m
+2026-10-25T13:24:32.3345442Z [36;1mpatch -p1 -d "$KS" < ../patches/001.patch 2>/dev/null || \[0m
+2026-10-25T13:24:32.3345825Z [36;1m  echo "(001.patch 已含或跳过)"[0m
+2026-10-25T13:24:32.3346192Z [36;1m# === 应用 V10 + 虚拟化/跨平台 全开清单 (w210ds_virt.config) ===[0m
+2026-10-25T13:24:32.3346688Z [36;1mecho "--- 应用 w210ds_virt.config ($(grep -cE '^CONFIG_[A-Z0-9_]+=y' ../config/w210ds_virt.config) 项) ---"[0m
+2026-10-25T13:24:32.3347436Z [36;1mgrep -E '^CONFIG_[A-Z0-9_]+=y' ../config/w210ds_virt.config | sed -E 's/^CONFIG_//; s/=y$//' | while read -r s; do[0m
+2026-10-25T13:24:32.3347960Z [36;1m  ./scripts/config --enable "$s" 2>/dev/null || true[0m
+2026-10-25T13:24:32.3348299Z [36;1mdone[0m
+2026-10-25T13:24:32.3348607Z [36;1m# 关闭 BTF: CI runner 无 pahole, 强制开会导致构建失败 (BTF 非必需)[0m
+2026-10-25T13:24:32.3349058Z [36;1m./scripts/config --disable DEBUG_INFO_BTF 2>/dev/null || true[0m
+2026-10-25T13:24:32.3349461Z [36;1m# === 关键修复: 关闭 CRC 校验, 但强行保留 vermagic 里的 "modversions" 字样 ===[0m
+2026-10-25T13:24:32.3349862Z [36;1m# 新增命名空间等会改变 nsproxy/cred 布局, 原厂 .ko 的 module_layout CRC 对不上;[0m
+2026-10-25T13:24:32.3350299Z [36;1m# 关 MODVERSIONS 让内核不再做 CRC 校验, 同时保留 "modversions" 字符串使 vermagic 整串全等。[0m
+2026-10-25T13:24:32.3350706Z [36;1m./scripts/config --disable MODVERSIONS[0m
+2026-10-25T13:24:32.3351054Z [36;1m./scripts/config --enable MODULE_UNLOAD[0m
+2026-10-25T13:24:32.3351651Z [36;1msed -i 's|#define MODULE_VERMAGIC_MODVERSIONS ""|#define MODULE_VERMAGIC_MODVERSIONS "modversions "|' include/linux/vermagic.h[0m
+2026-10-25T13:24:32.3352208Z [36;1mecho "--- vermagic.h 校验 ---"[0m
+2026-10-25T13:24:32.3352580Z [36;1mgrep -n "MODULE_VERMAGIC_MODVERSIONS" include/linux/vermagic.h[0m
+2026-10-25T13:24:32.3353055Z [36;1mif grep -q 'MODULE_VERMAGIC_MODVERSIONS ""' include/linux/vermagic.h; then[0m
+2026-10-25T13:24:32.3353493Z [36;1m  echo "ERROR: vermagic.h 改写失败"; exit 1[0m
+2026-10-25T13:24:32.3353934Z [36;1mfi[0m
+2026-10-25T13:24:32.3354422Z [36;1mecho "vermagic.h patched OK"[0m
+2026-10-25T13:24:32.3354909Z [36;1mif ./scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi[0m
+2026-10-25T13:24:32.3355450Z [36;1m# 去掉 UTS_RELEASE 尾部 dirty 标记 "+" (双保险)[0m
+2026-10-25T13:24:32.3355826Z [36;1mgit config --global --add safe.directory "$PWD" || true[0m
+2026-10-25T13:24:32.3356244Z [36;1mgit config user.email buildbot@example.com || true[0m
+2026-10-25T13:24:32.3356714Z [36;1mgit config user.name buildbot || true[0m
+2026-10-25T13:24:32.3357109Z [36;1mgit add -A Makefile include/linux/vermagic.h >/dev/null 2>&1 || true[0m
+2026-10-25T13:24:32.3357893Z [36;1mgit -c user.email=buildbot@example.com -c user.name=buildbot commit -q -m "ZTE source: virtualization config + vermagic align" >/dev/null 2>&1 || echo "(no changes to commit)"[0m
+2026-10-25T13:24:32.3358524Z [36;1mtouch .scmversion[0m
+2026-10-25T13:24:32.3358855Z [36;1mmake LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig[0m
+2026-10-25T13:24:32.3359303Z [36;1m# === 秒级预检: UTS_RELEASE 必须逐个符号等于原厂真串 ===[0m
+2026-10-25T13:24:32.3359718Z [36;1mmake LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 include/config/kernel.release[0m
+2026-10-25T13:24:32.3360184Z [36;1mKR=$(cat include/config/kernel.release 2>/dev/null || true)[0m
+2026-10-25T13:24:32.3360589Z [36;1mif [ -z "$KR" ]; then[0m
+2026-10-25T13:24:32.3361000Z [36;1m  KR=$(make -s LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 kernelrelease 2>/dev/null | tail -1 || true)[0m
+2026-10-25T13:24:32.3361476Z [36;1mfi[0m
+2026-10-25T13:24:32.3361795Z [36;1mTARGET="5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925"[0m
+2026-10-25T13:24:32.3362212Z [36;1mecho "UTS_RELEASE(preflight) = [$KR]"[0m
+2026-10-25T13:24:32.3362562Z [36;1mecho "TARGET                 = [$TARGET]"[0m
+2026-10-25T13:24:32.3362901Z [36;1mif [ "$KR" != "$TARGET" ]; then[0m
+2026-10-25T13:24:32.3363540Z [36;1m  echo "ERROR: UTS_RELEASE 不等于目标串 (多余 '+' 或 '-g<sha>' 会让原厂 .ko 拒绝加载)"; exit 1[0m
+2026-10-25T13:24:32.3364239Z [36;1mfi[0m
+2026-10-25T13:24:32.3364511Z [36;1mecho "UTS_RELEASE preflight OK"[0m
+2026-10-25T13:24:32.3364821Z [36;1mcd ..[0m
+2026-10-25T13:24:32.3365086Z [36;1mecho "=== 校验关键配置 ==="[0m
+2026-10-25T13:24:32.3365939Z [36;1mfor k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_CLANG_THIN MODVERSIONS MODULE_UNLOAD SMP PREEMPT KVM KVM_ARM64 VIRTIO VHOST OVERLAY_FS BRIDGE VETH SECCOMP BPF_SYSCALL; do[0m
+2026-10-25T13:24:32.3366937Z [36;1m  v=$(grep -E "^CONFIG_${k}=" "$KS/.config" | head -1)[0m
+2026-10-25T13:24:32.3367320Z [36;1m  echo "$k -> ${v:-NOT_SET}"[0m
+2026-10-25T13:24:32.3367627Z [36;1mdone[0m
+2026-10-25T13:24:32.3367933Z [36;1mif grep -qE '^CONFIG_MODVERSIONS=y' "$KS/.config"; then[0m
+2026-10-25T13:24:32.3368330Z [36;1m  echo "ERROR: CONFIG_MODVERSIONS 未关闭"; exit 1[0m
+2026-10-25T13:24:32.3368664Z [36;1mfi[0m
+2026-10-25T13:24:32.3404022Z shell: /usr/bin/bash -e {0}
+2026-10-25T13:24:32.3404353Z env:
+2026-10-25T13:24:32.3405269Z   PATH: /usr/lib/llvm-14/bin:/snap/bin:/home/runner/.local/bin:/opt/pipx_bin:/home/runner/.cargo/bin:/home/runner/.config/composer/vendor/bin:/usr/local/.ghcup/bin:/home/runner/.dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+2026-10-25T13:24:32.3406223Z   CLANG_CC: clang-14
+2026-10-25T13:24:32.3406492Z   CLANG_LD: ld.lld-14
+2026-10-25T13:24:32.3406775Z ##[endgroup]
+2026-10-25T13:24:32.5780347Z /bin/sh: 1: ./scripts/pahole-flags.sh: Permission denied
+2026-10-25T13:24:32.5822529Z   HOSTCC  scripts/basic/fixdep
+2026-10-25T13:24:32.9446854Z /bin/sh: 1: ./scripts/pahole-flags.sh: Permission denied
+2026-10-25T13:24:32.9492525Z   HOSTCC  scripts/kconfig/conf.o
+2026-10-25T13:24:33.1599918Z   HOSTCC  scripts/kconfig/confdata.o
+2026-10-25T13:24:33.3201602Z   HOSTCC  scripts/kconfig/expr.o
+2026-10-25T13:24:33.4615041Z   LEX     scripts/kconfig/lexer.lex.c
+2026-10-25T13:24:33.4897083Z   YACC    scripts/kconfig/parser.tab.[ch]
+2026-10-25T13:24:33.6674573Z   HOSTCC  scripts/kconfig/lexer.lex.o
+2026-10-25T13:24:33.8785494Z   HOSTCC  scripts/kconfig/menu.o
+2026-10-25T13:24:34.0080832Z   HOSTCC  scripts/kconfig/parser.tab.o
+2026-10-25T13:24:34.1445455Z   HOSTCC  scripts/kconfig/preprocess.o
+2026-10-25T13:24:34.2396986Z   HOSTCC  scripts/kconfig/symbol.o
+2026-10-25T13:24:34.4701780Z   HOSTCC  scripts/kconfig/util.o
+2026-10-25T13:24:34.5137503Z   HOSTLD  scripts/kconfig/conf
+2026-10-25T13:24:34.5441188Z sh: 1: ./scripts/cc-version.sh: Permission denied
+2026-10-25T13:24:34.5448856Z scripts/Kconfig.include:44: Sorry, this compiler is not supported.
+2026-10-25T13:24:34.5450600Z make[1]: *** [scripts/kconfig/Makefile:77: olddefconfig] Error 1
+2026-10-25T13:24:34.5453652Z make: *** [Makefile:647: olddefconfig] Error 2
+2026-10-25T13:24:34.5465444Z ##[error]Process completed with exit code 2.
+2026-10-25T13:24:34.5602279Z Post job cleanup.
+2026-10-25T13:24:34.6387602Z [command]/usr/bin/git version
+2026-10-25T13:24:34.6442149Z git version 2.55.0
+2026-10-25T13:24:34.6490938Z Temporarily overriding HOME='/home/runner/work/_temp/a47f0a22-ff2e-43bb-ac12-a16b3d4eb99d' before making global git config changes
+2026-10-25T13:24:34.6498996Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-25T13:24:34.6506989Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/gki-droidspaces-build/gki-droidspaces-build
+2026-10-25T13:24:34.6557306Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-25T13:24:34.6604744Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-25T13:24:34.6988459Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-25T13:24:34.7082205Z http.https://github.com/.extraheader
+2026-10-25T13:24:34.7101501Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-10-25T13:24:34.7147583Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-25T13:24:34.7594710Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-25T13:24:34.7625825Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-25T13:24:34.8146614Z Cleaning up orphan processes
+2026-10-25T13:24:34.8378604Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

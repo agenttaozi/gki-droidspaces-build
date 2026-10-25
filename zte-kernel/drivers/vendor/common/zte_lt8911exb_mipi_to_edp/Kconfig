@@ -1,0 +1,4 @@
+config ZTE_LCD_LT8911EXB_MIPI_TO_EDP
+	tristate "ZTE LCD mipi dsi to edp"
+	default n
+

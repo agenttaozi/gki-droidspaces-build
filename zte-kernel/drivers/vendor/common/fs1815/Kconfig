@@ -1,0 +1,11 @@
+config ZTE_SND_SOC_CODEC_FS1815N
+        tristate "SoC Audio for FourSemi PA FS1599N"
+        depends on I2C
+    help
+        This option enables support for FourSemi PA.
+
+config ZTE_SND_SOC_CODEC_FS1815N_DOUBLE
+        tristate "SoC Audio for FourSemi PA FS1599N double"
+        depends on I2C
+    help
+        This option enables support for FourSemi PA double.

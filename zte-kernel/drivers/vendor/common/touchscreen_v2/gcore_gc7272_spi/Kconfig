@@ -1,0 +1,11 @@
+#
+# GCORE_V3 Touchscreen driver configuration
+#
+
+config TOUCHSCREEN_GCORE_GC7272_SPI
+	bool "gcore Touchscreen"
+		default n
+		help
+		  Say Y here if you have gcore touch panel.
+		  If unsure, say N.
+

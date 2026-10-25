@@ -1,0 +1,116 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config VENDOR_SQC_MODULE
+	tristate "sqc power policy"
+	help
+	  Say Y here, if supported zte sqc charger
+
+config VENDOR_SQC_CHARGER_SPRD
+	bool "sqc power sprd"
+	default n
+	help
+	  Say Y here, if supported zte sqc charger sprd
+
+config VENDOR_SQC_NETLINK
+	tristate "sqc power NETLINK"
+	help
+	  Say Y here, if supported zte sqc charger NETLINK
+
+config VENDOR_SQC_BQ2560X
+	tristate "sqc power bq2560x"
+	help
+	  Say Y here, if supported zte sqc charger BQ2560X
+
+config VENDOR_SQC_BQ25890
+	tristate "sqc power bq25890"
+	help
+	  Say Y here, if supported zte sqc charger BQ25890
+
+config VENDOR_SQC_BQ2597X
+	tristate "sqc power bq2597x"
+	help
+	  Say Y here, if supported zte sqc charger bq2597x
+
+config VENDOR_SQC_SC8989X
+	tristate "sqc power sc8989x"
+	default n
+	help
+	  Say Y here, if supported zte sqc charger sc8989x
+
+config VENDOR_SQC_SGM41510
+	tristate "sqc power sgm41510"
+	default n
+	help
+	  Say Y here, if supported zte sqc charger sgm41510
+
+config VENDOR_SQC_HL7009
+	tristate "sqc power hl7009"
+	default n
+	help
+	  Say Y here, if supported zte sqc charger hl7009
+
+config SC888X_CHARGER
+	tristate "SC8886X Buck Boost Charger driver"
+	default n
+	help
+		If you say yes here you will get support for the SC8886/SC8886S/SC8886A/SC8885/SC8885S/SC8885A Buck Boost Charger.
+		This driver can give support for SC8886/SC8886S Interface.
+
+config LT8711_DP_TO_HDMI
+	tristate "lt877 hdmi to dp driver"
+	default n
+	help
+		If you say yes here you will get support for the lt877 hdmi to dp driver.
+		This driver can give support for lt877 Interface.
+
+config VENDOR_SQC_QC3PLUS
+	tristate "use qc3 detect chip"
+	default n
+	help
+	  Say Y here to enable the "QC3 DETECT CHIP" driver
+
+config SMART_BATTERY
+       tristate "smart battery driver"
+       depends on REGMAP_I2C
+       help
+         Say Y to enable support for the smart battery.
+config VENDOR_SQC_NU2115
+        tristate "NU2115 Charger Pump driver"
+        help
+          If you say yes here you will get support for the NU2115 Charge Pump.
+          This driver can give support for NU2115 Interface.
+
+config VENDOR_SQC_SC8541
+        tristate "SC8541 Charger Pump driver"
+        help
+          If you say yes here you will get support for the SC8541 Charge Pump.
+          This driver can give support for SC8541 Interface.
+
+config VENDOR_SQC_UPM6720
+        tristate "UPM6720 Charger Pump driver"
+        help
+          If you say yes here you will get support for the UPM6720 Charge Pump.
+          This driver can give support for UPM6720 Interface.
+
+config VENDOR_SQC_SD76930
+	tristate "sqc power sd76930"
+	default n
+	help
+	  Say Y here, if supported zte sqc charger sd76930
+
+config VENDOR_SQC_ETA6937
+	tristate "sqc power eta6937"
+	default n
+	help
+	  Say Y here, if supported zte sqc charger eta6937
+
+config OTG_NAME_COMPLITE
+	bool "otg desc name control"
+	default n
+	help
+	  Say Y here, if supported otg desc name control
+
+config BQ2560X_BQ25890_SUPPORT
+	bool "whether use bq2560x and bq25890 in same project"
+	default n
+	help
+	  Say Y here, if supported bq2560x and bq25890 each IC

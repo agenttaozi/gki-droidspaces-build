@@ -1,0 +1,20 @@
+config HALL_SENSOR_AH1898
+	tristate "HALL_SENSOR_AH1898"
+		default n
+		help
+			Say Y here to build support for hall.
+			To compile this driver as a module, choose M here.
+
+config HALL_SENSOR_AK09973
+	tristate "HALL_SENSOR_AK09973"
+		default n
+		help
+			Say Y here to build support for ak09973.
+			To compile this driver as a module, choose M here.
+
+config HALL_POWEROFF_CHG_REPORT_KEY_EVENT
+	bool "HALL_POWEROFF_CHG_REPORT_KEY_EVENT"
+		default n
+		help
+			Say Y here to build support for hall report key event in poweroff charging.
+			To compile this driver as a module, choose M here.

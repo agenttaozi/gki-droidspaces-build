@@ -1,0 +1,84 @@
+#
+# Kconfig for the sprd kernel device drivers.
+#
+
+config ZTE_BOOTREASON
+	tristate "Zte Bootreason"
+	default n
+	help
+	  Say Y here, support zte bootreason.
+
+config ZTE_BEILU_GPIO_CTL
+	tristate "Zte Beilu Gpio Control"
+	default n
+	help
+	  Say Y here, support Beilu Gpio Control.
+
+config ZTE_SERIAL_KEYBOARD_DOCK
+	tristate "Zte Serial Keyboard Dock"
+	depends on INPUT
+	help
+		Say Y here if you want to enable dock keyboard.
+
+config ZTE_SERIAL_KEYBOARD_DOCK_V1
+	tristate "Zte Serial Keyboard For Pad"
+	depends on ZTE_SERIAL_KEYBOARD_DOCK
+	help
+		Say Y here if you want to enable dock keyboard.
+
+config ZTE_SERIAL_KEYBOARD_DOCK_V2
+	tristate "Zte Serial Keyboard For Notebook PC"
+	depends on ZTE_SERIAL_KEYBOARD_DOCK
+	help
+		Say Y here if you want to enable dock keyboard.
+
+config ZTE_SERIAL_KEYBOARD_DOCK_V3
+	tristate "Zte Serial Keyboard Generation Three"
+	depends on ZTE_SERIAL_KEYBOARD_DOCK
+	help
+		Say Y here if you want to enable Generation Three.
+
+config ZTE_ZSK_SERIAL
+	tristate "Zte Zsk Serial"
+	depends on ZTE_SERIAL_KEYBOARD_DOCK
+	help
+		Say Y here if you want to enable zsk keyboard.
+
+config ZTE_HALL_CTL_KEYBOARD_EN
+	tristate "Zte Hall Ctl Keyboard En"
+	depends on ZTE_SERIAL_KEYBOARD_DOCK
+	help
+		Say Y here if you want to control zsk keyboard by hall.
+
+config ZTE_HDBD_GPIO_CTL
+	tristate "Zte HDBD GPS Gpio Control"
+	default n
+	help
+	  Say Y here, support Beilu Gpio Control.
+
+config ZTE_FEATURE_CPUINFO_SERIAL_HARDWARE
+	tristate "zte cpuinfo, add serialno and hardware info"
+	default n
+	help
+	  Say Y here, support zte cpuinfo.
+
+config ZTE_S_ONE_GPIOS
+	tristate "S1 modem gpios control"
+	default n
+	help
+	  Say Y here, support S1 modem gpios config.
+
+config ZTE_PCI_SERIAL
+	tristate "S1 pci serial"
+	default n
+	help
+	  Say Y here, support S1 pci serial.
+
+config USBHUB_TUSB8041
+	tristate "TUSB8041 4ports USB Hub"
+	default n
+	help
+	  Say Y here to enable the TUSB8041 4ports USB Hub
+
+#ZTE_AUDIO
+source "drivers/vendor/soc/sprd/fsa4480/Kconfig"

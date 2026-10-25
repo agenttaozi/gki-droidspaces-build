@@ -1,0 +1,6 @@
+config REDRIVER_PIDPX1217
+	tristate "PIDPX1217 Driver"
+	help
+	  Enable this to support QOGIRN6PRO USB3 PHY . This
+	  driver is redriver for usb3.0.
+

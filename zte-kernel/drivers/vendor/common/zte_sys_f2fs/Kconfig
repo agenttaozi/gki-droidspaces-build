@@ -1,0 +1,5 @@
+config ZTE_SYSFS_F2FS
+	tristate "ZTE SYS F2FS bdf_of_every_seg and prefree_segments"
+	depends on ARM || ARM64
+	help
+	  Query the degree of disk fragmentation.

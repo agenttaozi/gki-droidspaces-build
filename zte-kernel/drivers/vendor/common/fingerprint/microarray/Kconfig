@@ -1,0 +1,9 @@
+#
+# microarray Fingerprint driver configuration
+#
+
+config PLATFORM_FINGERPRINT_MICROARRAY
+       bool "generic microarray E026L fingerprint driver"
+       default n
+       help
+       add support for microarray fingerprint driver.

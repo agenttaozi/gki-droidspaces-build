@@ -1,0 +1,2 @@
+# LED AW21024
+obj-$(CONFIG_ZTE_LEDS_AW21024)	+= leds-aw21024.o

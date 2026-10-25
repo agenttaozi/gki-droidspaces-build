@@ -1,0 +1,4 @@
+config NB_POWERON_WITH_LIDON
+	tristate "ZTE Notebook Poweron With Lidon support"
+	help
+		This option enable ZTE  Notebook Poweron With Lidon and interface.

@@ -1,0 +1,5 @@
+
+config VENDOR_STATS_INFO
+	tristate "ZTE STATS INFO"
+	help
+	  Say 'y' here to include support for zte stats info.

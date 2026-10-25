@@ -1,0 +1,1 @@
+obj-$(CONFIG_ZTE_FEATURE_CPUINFO_SERIAL_HARDWARE) += cpuinfo_serial_hardware.o

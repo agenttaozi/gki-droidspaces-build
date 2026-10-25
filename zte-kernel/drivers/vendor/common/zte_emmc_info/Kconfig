@@ -1,0 +1,5 @@
+
+config ZTE_EMMC_INFO
+	tristate "Zte Eemmc Ddr Info"
+	help
+	  read emmc ddr info.

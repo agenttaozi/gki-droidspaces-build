@@ -1,0 +1,1 @@
+obj-$(CONFIG_REDRIVER_PIDPX1217)	+= pidpx1217-i2c.o

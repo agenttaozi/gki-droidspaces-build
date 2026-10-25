@@ -1,0 +1,1 @@
+obj-$(CONFIG_ZTE_S_ONE_GPIOS) += zte_sone_gpios.o

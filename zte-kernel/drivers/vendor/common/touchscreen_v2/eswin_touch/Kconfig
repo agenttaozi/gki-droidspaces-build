@@ -1,0 +1,28 @@
+#
+# ESWIN_TOUCH touchscreen driver configuration
+#
+
+config TOUCHSCREEN_ESWIN_TOUCH
+	bool "eswin_touch"
+	default n
+	help
+	  Say Y here if you have eswin_touch
+	  to your system
+
+	  If unsure, say N.
+
+config TOUCHSCREEN_ESWIN_TOUCH_I2C
+	bool "I2C"
+	default n
+	help
+	  Say Y here to use I2C method
+
+	  If unsure, say N
+
+config TOUCHSCREEN_ESWIN_TOUCH_SPI
+	bool "SPI"
+	default n
+	help
+	  Say Y here to use SPI method
+
+	  If unsure, say N

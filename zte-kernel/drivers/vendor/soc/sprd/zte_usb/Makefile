@@ -1,0 +1,1 @@
+obj-$(CONFIG_USBHUB_TUSB8041) += tusb8041.o

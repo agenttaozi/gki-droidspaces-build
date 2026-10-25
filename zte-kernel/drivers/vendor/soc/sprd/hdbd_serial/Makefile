@@ -1,0 +1,1 @@
+obj-$(CONFIG_ZTE_HDBD_GPIO_CTL) += sprd_serial_hdbd8040.o

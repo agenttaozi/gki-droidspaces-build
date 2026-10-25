@@ -1,0 +1,1 @@
+obj-$(CONFIG_NB_POWERON_WITH_LIDON)		+= notebook_poweron_with_lidon.o

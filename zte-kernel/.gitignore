@@ -162,6 +162,6 @@ x509.genkey
 # Documentation toolchain
 sphinx_*/
 # zte drivers
-drivers/vendor/
-include/vendor/
+# NOTE: drivers/vendor/ and include/vendor/ are tracked in this flattened repo
+# (they are normally a separate overlay; force-included so the kernel builds).
 

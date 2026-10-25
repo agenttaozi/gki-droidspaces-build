@@ -1,0 +1,11 @@
+config ZTE_SND_SOC_TASDEVICE_2563
+	tristate "Texas Instruments TASDEVICE  2563"
+	select REGMAP
+	select REGMAP_I2C
+	select I2C
+	select SYSFS
+	select CONFIG_SOUND
+	help
+	Enable support Texas Instruments tasdevice
+	To compile this driver as a module, choose M here
+	If unsure select "N"

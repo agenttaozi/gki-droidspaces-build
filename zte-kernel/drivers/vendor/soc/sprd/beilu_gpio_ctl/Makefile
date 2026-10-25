@@ -1,0 +1,1 @@
+obj-$(CONFIG_ZTE_BEILU_GPIO_CTL) += beilu_gpio_ctl.o
