@@ -139,7 +139,8 @@ jobs:
           set -e
           export PATH="/usr/lib/llvm-14/bin:$PATH"
           cd "${{ github.event.inputs.KERNEL_TREE }}"
-          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 -j"$(nproc)" Image
+          # CC_ARM32=clang: 用 clang 编 32 位 vdso32 (CONFIG_COMPAT=y), 避免 runner 缺 arm32 gcc
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 CC_ARM32=clang -j"$(nproc)" Image
           ls -la arch/arm64/boot/Image
           echo "=== Image 体积闸门 (原厂槽位预算 47443968 字节) ==="
           SZ=$(stat -c%s arch/arm64/boot/Image)
