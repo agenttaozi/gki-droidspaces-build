@@ -1,0 +1,133 @@
+/ {
+	fragment {
+		target-path = "/";
+		__overlay__ {
+			lcds {
+				lcd_tianma_ft8205p_mipi_hdplus_focal: lcd_tianma_ft8205p_mipi_hdplus_focal {
+					zte,lcd-init-code-version = "20251020_lpwg_sequence";
+
+					zte,lcd-backlight-register-bit-length = <0x0C>;
+					zte,lcm_backlight_curve_mode = "lcd_brightness_max_450_lux";
+					zte,lcd_bl_vsp_vsn_voltage = <0x14>;
+					zte,lcd-disable-ssc;
+					zte,panel-name = "lcd_tianma_ft8205p_mipi_hdplus_focal";
+					zte,lcd-delay-open-bl-value = <34>;
+					zte,lcd-version-v000;
+					zte,lcd-disable-mipi-hop;
+					zte,dsc-block-pred-disable = <1>;/* 0:close default , 1:open */
+					zte,lcd-reset-down-before-vsp;
+
+					sprd,dsi-work-mode = <1>;
+					sprd,dsi-lane-number = <4>;
+					sprd,dsi-color-format = "dsc";
+					sprd,dpi-clk-div = <0>;
+					//sprd,video-lp-cmd-enable = <1>;
+					//sprd,video-lp-en-mode = <3>;
+					sprd,hporch-lp-disable = <0>;
+					sprd,vrr-enabled;
+					sprd,vrr-max-layers = <3>;
+					sprd,slice-width = <660>;
+					sprd,slice-height = <44>;
+					sprd,output-bpc = <8>;
+					sprd,dsc-enable = <1>;
+					sprd,dual-dsi-enable = <0>;
+
+					sprd,phy-bit-clock = <1152000>;
+					sprd,phy-escape-clock = <20000>;/* kHz */
+
+					sprd,width-mm = <14680>;
+					sprd,height-mm = <23488>;
+
+					sprd,esd-check-enable = <1>;/* 0:close , 1:open */
+					sprd,esd-check-mode = <4>;/* 0:REG ,1:TE  */
+					sprd,esd-check-period = <2000>;
+					sprd,esd-check-register = <0x0A>;
+					sprd,esd-check-value = <0x9C>;
+
+					sprd,dphy-taget-val = <5>;
+
+					sprd,reset-on-sequence = <1 5>, <0 2>, <1 50>;
+					sprd,reset-off-sequence = <1 20>;
+
+					sprd,use-gen-write;
+					sprd,initial-command = [
+29 00 00 03 41 5A 09
+29 00 00 03 95 23 9A
+29 00 00 03 41 5A 0E
+29 00 00 02 80 A0
+29 00 00 03 41 5A 13
+29 00 00 11 80 00 08 80 15 00 90 10 18 7E 11 00 D6 03 04 3C 00
+29 00 00 11 90 70 88 30 98 32 70 3E 97 8B 39 30 C4 09 C4 09 C4
+29 00 00 11 A0 89 4F DC 45 10 0A C4 09 C4 09 10 02 00 00 00 00
+29 00 00 11 B0 00 00 00 00 00 00 DB 01 31 75 B9 42 86 CA 31 75
+29 00 00 11 C0 B9 42 86 CA 6C DB B6 A1 08 60 00 24 18 00 09 06
+29 00 00 11 D0 40 82 01 90 60 00 24 D0 01 09 74 40 02 1D 90 40
+29 00 00 11 E0 07 24 D0 01 09 1E 46 1E 46 00 00 20 C5 0F 00 C0
+29 00 00 0D F0 10 40 26 4E 46 02 C8 20 80 0C 00 00
+29 00 00 03 41 5A 14
+29 00 00 11 80 01 02 40 2C 99 DF EF F7 D3 C8 03 00 00 20 84 78
+29 00 00 11 90 01 06 13 10 17 C0 60 02 62 02 18 4C C0 0D F8 07
+29 00 00 11 A0 C2 00 00 00 00 00 1B 02 0C 26 00 40 08 43 29 F1
+29 00 00 11 B0 FB 11 20 92 01 C8 64 02 00 00 00 00 80 46 08 46
+29 00 00 11 C0 08 05 00 30 18 0C CF 00 8D 7C 0C C5 00 F4 04 D0
+29 00 00 11 D0 C8 C7 50 0C 40 4F 01 8D 7C 0C C5 00 F4 24 D0 C8
+29 00 00 11 E0 C7 50 0C 40 4F 03 8D 7C 0C C5 00 F4 44 D0 C8 C7
+29 00 00 11 F0 50 0C 40 4F 05 8D 7C 0C C5 00 F4 64 D0 C8 C7 50
+29 00 00 03 41 5A 20
+29 00 00 11 80 44 73 03 00 CA F3 FF 68 00 08 02 08 04 41 18 30 
+29 00 00 11 B0 18 36 1B 11 04 20 02 D0 80 B3 21 38 30 18 88 03 
+29 00 00 11 C0 82 01 4D 70 60 30 8D 0D A4 A2 00 80 04 38 00 50 
+29 00 00 11 E0 43 49 55 55 55 55 D5 CC CC CC CC CC 0C 08 86 C6 
+29 00 00 03 41 5A 21
+29 00 00 11 80 04 41 46 6E E4 46 6E E4 46 6E E4 46 6E E4 46 6E 
+29 00 00 11 90 E4 06 00 85 11 0C 00 00 40 00 00 00 00 16 00 A5 
+29 00 00 03 41 5A 24 
+29 0A 00 02 90 A5
+29 00 00 03 41 5A 2F
+29 00 00 02 4C 03
+29 00 00 02 09 00
+39 00 00 02 35 00
+05 64 00 01 11
+05 14 00 01 29
+					];
+
+					sprd,sleep-in-command = [
+						39 05 00 02 28 00
+						39 78 00 02 10 00
+						39 00 00 02 04 5A
+						39 14 00 02 05 5A
+						];
+					sprd,sleep-out-command = [
+						05 78 00 01 11
+						05 14 00 01 29
+						];
+					display-timings {
+						native-mode = <&lcd_tianma_ft8205p_fhd_timing0>;
+						lcd_tianma_ft8205p_fhd_timing0: timing0 {
+							clock-frequency = <384000000>;
+							hactive = <1320>;
+							vactive = <2112>;
+							hback-porch = <198>;
+							hfront-porch = <200>;
+							vback-porch = <544>;
+							vfront-porch = <1020>;
+							hsync-len = <20>;
+							vsync-len = <6>;
+						};
+						lcd_tianma_ft8205p_fhd_timing1: timing1 {
+							clock-frequency = <384000000>;
+							hactive = <1320>;
+							vactive = <2112>;
+							hback-porch = <198>;
+							hfront-porch = <200>;
+							vback-porch = <136>;
+							vfront-porch = <200>;
+							hsync-len = <20>;
+							vsync-len = <6>;
+						};
+					};
+				};
+			};
+		};
+	};
+};

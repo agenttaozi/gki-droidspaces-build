@@ -1,0 +1,32 @@
+&i2c3 {
+	status = "okay";
+	ak09973@10 {
+		compatible = "akm,ak09973";
+		reg = <0x10>;
+		status = "okay";
+		ak09973,irq-gpio = <&ap_gpio 124 0>;
+
+		ak09973,mode = <6>;
+		ak09973,DRDY_event = <0>;
+		ak09973,SW_event = <0 0 0 1>;
+		ak09973,ERR_event = <0>;
+		ak09973,POL_setting = <0 0 0 0 >;
+		ak09973,SDR_setting = <1>;
+		ak09973,SMR_setting = <0>;
+	};
+
+	ak09973@11 {
+		compatible = "akm,ak09973";
+		reg = <0x11>;
+		status = "okay";
+		ak09973,irq-gpio = <&ap_gpio 120 0>;
+
+		ak09973,mode = <6>;
+		ak09973,DRDY_event = <0>;
+		ak09973,SW_event = <0 0 0 1>;
+		ak09973,ERR_event = <0>;
+		ak09973,POL_setting = <0 0 0 0 >;
+		ak09973,SDR_setting = <1>;
+		ak09973,SMR_setting = <0>;
+	};
+};

@@ -1,0 +1,79 @@
+/*
+ * this file is ued to change sprd dtsi which can't be changed by overlay
+ * such as /delete-node/ /delete-property/ and alises
+ */
+
+#include "touchscreen.dtsi"
+#include "zte_camera.dtsi"
+#include "zte_hall.dtsi"
+#include "zte_audio.dtsi"
+#include "zte_nfc_thn31.dtsi"
+#include "zte_charger.dtsi"
+#include "../../thermal/ntc-chg.dtsi"
+
+/{
+	zsk_keyboard {
+		compatible = "zte,zsk_keyboard";
+		zte,keyboard_id = <&ap_gpio 120 1>;
+		zte,keyboard_en = <&ap_gpio 62 0>;
+		zsk,res_x = <1900>;
+		zsk,res_y = <900>;
+		zsk,width = <95>;
+		zsk,height = <47>;
+		zsk,slot_num = <4>;
+		zsk,hwcode_num = <77>;
+		zsk,hwcode = <
+			//line 1, function line
+			0x29 0xf1 0xf2 0xf3 0xf4 0xf5 0xf6 0xf7 0xf8 0xf9 0xfa 0xfb 0xfc 0x4c
+			//line1, f1~f12
+			//0x3a 0x3b 0x3c 0x3d 0x3e 0x3f 0x40 0x41 0x42 0x43 0x44 0x45
+			//line2, number
+			0x35 0x1e 0x1f 0x20 0x21 0x22 0x23 0x24 0x25 0x26 0x27 0x2d 0x2e 0x2a
+			//line3, alphabetical
+			0x2b 0x14 0x1a 0x08 0x15 0x17 0x1c 0x18 0x0c 0x12 0x13 0x2f 0x30 0x31
+			//line4, alphabetical
+			0x39 0x04 0x16 0x07 0x09 0x0a 0x0b 0x0d 0x0e 0x0f 0x33 0x34 0x28
+			//line5, alphabetical
+			0x1d 0x1b 0x06 0x19 0x05 0x11 0x10 0x36 0x37 0x38
+			//line6, modifier key
+			0xf0 0x2c 0x52 0x50 0x51 0x4f
+			//fn multikey
+			0xfd 0xfe 0x41 0x4b 0x4a 0x4e 0x4d
+		>;
+		zsk,lkeycode = <
+			//KEY_HOMEPAGE,KEY_BACK,KEY_COPY,KEY_PASTE,KEY_PREVIOUSSONG,KEY_PLAYPAUSE,KEY_NEXTSONG,KEY_VOLUMEDOWN,KEY_VOLUMEUP,KEY_BRIGHTNESSDOWN,KEY_BRIGHTNESSUP,KEY_PEN_ONLY,KEY_SCREENLOCK,KEY_DELETE	//line 1, function line
+			172 158 133 135 165 164 163 114 115 224 225 477 152 111
+			//KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6, KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F11, KEY_F12,				//line1, f1~f12
+			//59 60 61 62 63 64 65 66 67 68 87 88
+			//KEY_GRAVE, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0, KEY_MINUS, KEY_EQUAL, KEY_BACKSPACE,	//line2, number
+			41 2 3 4 5 6 7 8 9 10 11 12 13 14
+			//KEY_TAB, KEY_Q, KEY_W, KEY_E, KEY_R, KEY_T, KEY_Y, KEY_U, KEY_I, KEY_O, KEY_P, KEY_LEFTBRACE, KEY_RIGHTBRACE, KEY_BACKSLASH,	//line3, alphabetical
+			15 16 17 18 19 20 21 22 23 24 25 26 27 43
+			//KEY_CAPSLOCK, KEY_A, KEY_S, KEY_D, KEY_F, KEY_G, KEY_H, KEY_J, KEY_K, KEY_L, KEY_SEMICOLON, KEY_APOSTROPHE, KEY_ENTER,		//line4, alphabetical
+			58 30 31 32 33 34 35 36 37 38 39 40 28
+			//KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M, KEY_COMMA, KEY_DOT, KEY_SLASH,							//line5, alphabetical
+			44 45 46 47 48 49 50 51 52 53
+			//KEY_FN, KEY_SPACE, KEY_UP, KEY_LEFT, KEY_DOWN, KEY_RIGHT,														//line6, modifier key
+			464 57 103 105 108 106
+			//KEY_ZFN, KEY_ZFN_ESC, KEY_F11, KEY_PAGEUP, KEY_HOME, KEY_PAGEDOWN, KEY_END};			//fn multikey
+			416 417 87 104 102 109 107
+		>;
+	};
+
+	zcard_holder_det {
+		zcard-holder-det-gpios= <&eic_sync 36 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&sdio1 {
+	status = "disabled";
+	non-removable;
+};
+
+/*zte support wakeup for uart2*/
+&uart2 {
+	compatible = "zsk,sc9836-uart";
+	uart-gpio = <&eic_async 3 GPIO_ACTIVE_HIGH>;
+};
+
+

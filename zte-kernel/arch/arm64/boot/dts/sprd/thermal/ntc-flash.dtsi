@@ -1,0 +1,204 @@
+// SPDX-License-Identifier: (Licenseref-Unisoc-General-1.0 OR GPL-2.0-only)
+/*
+ * ntc-common.dtsi - Unisoc platform device
+ *
+ * Copyright 2022 Unisoc(Shanghai) Technologies Co.Ltd
+ *
+ * Licensed under the Unisoc General Software License, version 1.0 (the
+ * License);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * https://www.unisoc.com/en_us/license/UNISOC_GENERAL_LICENSE_V1.0-EN_US
+ * Software distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OF ANY KIND, either express or implied.
+ * See the Unisoc General Software License, version 1.0 for more details.
+ *
+ * Alternatively you can use and distribute this file under the terms of the
+ * GNU General Public License version 2, provided that it has to be used
+ *  (including but not limited to combining, linking) with any other file under
+ * the GNU General Public License version 2 on platforms that use Unisoc Chips.
+ */
+
+/ {
+	flash_thermistor: flash-sensor {
+		compatible = "generic-adc-thermal";
+		#thermal-sensor-cells = <0>;
+		io-channels = <&pmic_adc 4>;
+		io-channel-names = "sensor-channel";
+		temperature-lookup-table = <
+			(-40000) 1182
+			(-39000) 1181
+			(-38000) 1179
+			(-37000) 1178
+			(-36000) 1176
+			(-35000) 1175
+			(-34000) 1173
+			(-33000) 1171
+			(-32000) 1169
+			(-31000) 1167
+			(-30000) 1165
+			(-29000) 1162
+			(-28000) 1160
+			(-27000) 1157
+			(-26000) 1154
+			(-25000) 1151
+			(-24000) 1148
+			(-23000) 1145
+			(-22000) 1142
+			(-21000) 1138
+			(-20000) 1134
+			(-19000) 1130
+			(-18000) 1126
+			(-17000) 1122
+			(-16000) 1117
+			(-15000) 1112
+			(-14000) 1107
+			(-13000) 1102
+			(-12000) 1097
+			(-11000) 1091
+			(-10000) 1085
+			(-9000) 1079
+			(-8000) 1072
+			(-7000) 1066
+			(-6000) 1059
+			(-5000) 1051
+			(-4000) 1044
+			(-3000) 1036
+			(-2000) 1028
+			(-1000) 1020
+			0 1011
+			1000 1002
+			2000 993
+			3000 984
+			4000 974
+			5000 964
+			6000 954
+			7000 943
+			8000 933
+			9000 922
+			10000 911
+			11000 899
+			12000 887
+			13000 876
+			14000 863
+			15000 851
+			16000 839
+			17000 826
+			18000 813
+			19000 800
+			20000 787
+			21000 774
+			22000 761
+			23000 747
+			24000 734
+			25000 720
+			26000 706
+			27000 693
+			28000 679
+			29000 665
+			30000 652
+			31000 638
+			32000 624
+			33000 611
+			34000 597
+			35000 584
+			36000 570
+			37000 557
+			38000 544
+			39000 531
+			40000 518
+			41000 506
+			42000 493
+			43000 481
+			44000 468
+			45000 456
+			46000 444
+			47000 433
+			48000 421
+			49000 410
+			50000 399
+			51000 388
+			52000 377
+			53000 367
+			54000 357
+			55000 347
+			56000 337
+			57000 327
+			58000 318
+			59000 309
+			60000 300
+			61000 291
+			62000 283
+			63000 275
+			64000 267
+			65000 259
+			66000 251
+			67000 244
+			68000 236
+			69000 229
+			70000 223
+			71000 216
+			72000 209
+			73000 203
+			74000 197
+			75000 191
+			76000 185
+			77000 180
+			78000 174
+			79000 169
+			80000 164
+			81000 159
+			82000 154
+			83000 150
+			84000 145
+			85000 141
+			86000 137
+			87000 133
+			88000 129
+			89000 125
+			90000 121
+			91000 117
+			92000 114
+			93000 111
+			94000 107
+			95000 104
+			96000 101
+			97000 98
+			98000 95
+			99000 92
+			100000 90
+			101000 87
+			102000 85
+			103000 82
+			104000 80
+			105000 77
+			106000 75
+			107000 73
+			108000 71
+			109000 69
+			110000 67
+			111000 65
+			112000 63
+			113000 61
+			114000 60
+			115000 58
+			116000 56
+			117000 55
+			118000 53
+			119000 52
+			120000 50
+			121000 49
+			122000 48
+			123000 46
+			124000 45
+			125000 44 >;
+	};
+};
+
+&thm_zone {
+	flash_thmzone: flash-thmzone {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-sensors = <&flash_thermistor>;
+	};
+};

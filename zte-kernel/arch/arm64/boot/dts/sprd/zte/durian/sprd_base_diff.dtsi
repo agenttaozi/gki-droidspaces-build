@@ -1,0 +1,33 @@
+/*
+ * this file is ued to change sprd dtsi which can't be changed by overlay
+ * such as /delete-node/ /delete-property/ and alises
+ */
+
+#include "zte_touchscreen.dtsi"
+#include "zte_audio.dtsi"
+#include "zte_nfc_pn557.dtsi"
+#include "zte_camera_durian.dtsi"
+#include "zte_charger_durian.dtsi"
+#include "zte_fingerprint_durian.dtsi"
+#include "zte_sar.dtsi"
+
+/{
+        zcard_holder_det {
+                zcard-holder-det-gpios= <&eic_sync 36 GPIO_ACTIVE_HIGH>;
+        };
+};
+
+&sdio0 {
+	status = "disabled";
+	non-removable;
+};
+
+/*sprd patch for T ota to U, config modem 23A only */
+&reserved_memory {
+	/delete-node/ nrphy-iqmem@0xa2400000;
+
+	cp_reserved: cp-mem@88000000 {
+	no-map;
+	reg = <0x0 0x88000000 0x0 0x1d000000>;
+	};
+};

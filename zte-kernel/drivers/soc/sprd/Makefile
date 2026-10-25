@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0-only
+obj-$(CONFIG_SPRD_PIKE2_SLEEP)  += sprd_pike2_sleep.o
+obj-y				+= domain/
+$(info NFC_PMIC_CLK = $(NFC_PMIC_CLK))
+ifdef NFC_PMIC_CLK
+obj-m	+= sprd_pmic_refout.o
+endif

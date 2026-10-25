@@ -1,0 +1,35 @@
+&i2c2 {
+	status = "okay";
+        #address-cells = <1>;
+        #size-cells = <0>;
+        tms_nfc@29 {
+                compatible = "tms,nfc";
+		reg = <0x29>;
+		tms,device-name = "tms_nfc";
+		tms,device-count = <1>;
+                tms,irq-gpio = <&ap_gpio 127 0>;
+                tms,ven-gpio = <&ap_gpio 149 0>;
+        };
+};
+
+&spi2 {
+	status = "okay";
+
+	ese@0 {
+		status = "okay";
+		compatible = "tms,ese";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+		tms,device-name    = "tms_ese";
+		tms,device-count   = <1>;
+	};
+
+};
+
+&ump9622_pmic{
+        refout@2080 {
+                  compatible = "sprd,sc27xx-refout";
+                  regsw = <0x2080>;
+                  refnum = <3>;
+        };
+};

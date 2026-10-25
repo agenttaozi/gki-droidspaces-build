@@ -1,0 +1,21 @@
+/*
+ * this file is ued to change sprd dtsi which can't be changed by overlay
+ * such as /delete-node/ /delete-property/ and alises
+ */
+
+#include "touchscreen_carnation.dtsi"
+#include "zte_audio.dtsi"
+#include "zte_nfc_pn557.dtsi"
+#include "zte_camera_carnation.dtsi"
+#include "zte_charger_carnation.dtsi"
+
+/{
+        zcard_holder_det {
+                zcard-holder-det-gpios= <&eic_sync 36 GPIO_ACTIVE_HIGH>;
+        };
+};
+
+&sdio0 {
+	status = "disabled";
+	non-removable;
+};

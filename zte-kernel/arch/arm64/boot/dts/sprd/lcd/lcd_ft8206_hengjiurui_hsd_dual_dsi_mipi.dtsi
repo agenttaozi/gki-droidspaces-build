@@ -1,0 +1,76 @@
+/ {
+	fragment {
+		target-path = "/";
+		__overlay__ {
+			lcds {
+				lcd_ft8206_hengjiurui_hsd_dual_dsi_mipi: lcd_ft8206_hengjiurui_hsd_dual_dsi_mipi {
+
+					sprd,dsi-work-mode = <1>;
+					sprd,dsi-lane-number = <4>;
+					sprd,dsi-color-format = "rgb888";
+
+					sprd,phy-bit-clock = <932544>;
+					sprd,phy-escape-clock = <20000>;
+					sprd,dual-dsi-enable = <1>;
+
+					sprd,dpi-clk-div = <6>;
+					sprd,video-lp-cmd-enable = <1>;
+					sprd,hporch-lp-disable = <1>;
+					sprd,width-mm = <70>;
+					sprd,height-mm = <156>;
+
+					sprd,esd-check-enable = <0>;
+					sprd,esd-check-mode = <0>;
+					sprd,esd-check-period = <1000>;
+					sprd,esd-check-register = <0x0A>;
+					sprd,esd-check-value = <0x9C>;
+
+					sprd,reset-on-sequence = <1 10>, <0 50>,<1 120>;
+					sprd,reset-off-sequence = <1 20>;
+
+					sprd,initial-command = [
+						39 00 00 02 41 5A
+						39 00 00 03 41 5A 24
+						39 00 00 02 90 A5
+						39 00 00 03 41 5A 2F
+						39 00 00 02 4C 03
+						39 78 00 02 09 00
+						39 00 00 03 51 FF 0F
+						39 00 00 02 53 24
+						39 00 00 02 55 00
+						05 78 00 01 11
+						39 00 00 03 41 5A 0C
+						39 00 00 02 B3 84
+						39 00 00 02 41 00
+						05 64 00 01 29
+						];
+					sprd,sleep-in-command = [				
+						23 32 00 02 28 00
+						23 78 00 02 10 00					
+						];
+					sprd,sleep-out-command = [
+						23 78 00 02 11 00
+						23 14 00 02 29 00
+						];
+
+					display-timings {
+			native-mode = <&ft8206_hengjiurui_hsd_timing0>;
+
+			ft8206_hengjiurui_hsd_timing0: timing0 {
+				clock-frequency = <155424000>;
+				hactive = <1600>;
+				vactive = <2560>;
+				hback-porch = <80>;
+				hfront-porch = <128>;
+				vback-porch = <56>;
+				vfront-porch = <200>;
+				hsync-len = <24>;
+				vsync-len = <12>;
+			};
+		};
+	};
+			};
+		};
+	};
+};
+

@@ -1,0 +1,46 @@
+/*
+ * this file is ued to change sprd dtsi which can't be changed by overlay
+ * such as /delete-node/ /delete-property/ and alises
+ */
+
+#include "zte_touchscreen.dtsi"
+#include "zte_audio.dtsi"
+#include "zte_nfc_pn557.dtsi"
+#include "zte_camera_svcherry.dtsi"
+#include "zte_charger.dtsi"
+#include "zte_fingerprint.dtsi"
+#include "zte_hall.dtsi"
+#include "../../thermal/ntc-nr.dtsi"
+
+/{
+	zcard_holder_det {
+		zcard-holder-det-gpios= <&eic_sync 36 GPIO_ACTIVE_HIGH>;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		key_camera_shoot {
+			label = "Camera Shoot Key";
+			linux,input-type = <EV_KEY>;
+			linux,code = <KEY_CAMERA>;
+			gpios = <&ap_gpio 8 GPIO_ACTIVE_LOW>;
+			debounce-interval = <2>;
+			wakeup-source;
+		};
+
+		keypad_slide {
+			label = "Keypad Slide";
+			linux,code = <SW_KEYPAD_SLIDE>;
+			linux,input-type = <EV_SW>;
+			gpios = <&ap_gpio 180 GPIO_ACTIVE_HIGH>;
+			debounce-interval = <2>;
+			wakeup-source;
+		};
+	};
+};
+
+&sdio0 {
+	status = "disabled";
+	non-removable;
+};

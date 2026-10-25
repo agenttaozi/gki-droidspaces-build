@@ -1,0 +1,40 @@
+&i2c2 {
+	status = "okay";
+	aw9160x_sar@12 {
+		compatible = "awinic,aw9610x_sar";
+		reg = <0x12>;
+		sar-num = < 0 >;
+		irq-gpio = <&ap_gpio 132 0>;
+		chip_name = "AW96103";
+		channel_use_flag = <0x1f>;
+		status = "okay" ;
+	};
+
+	stk501xx_sar@28 {
+		compatible = "stk,stk501xx";
+		reg = <0x28>;
+
+		stk501xx,irq-gpio = <&ap_gpio 132 0>;
+		chip_name = "STK50153";
+		status = "okay" ;
+	};
+	
+	aw9160x_sar@13 {
+		compatible = "awinic,aw9610x_sar";
+		reg = <0x13>;
+		sar-num = < 1 >;
+		irq-gpio = <&ap_gpio 192 0>;
+		chip_name = "AW96103";
+		channel_use_flag = <0x1f>;
+		status = "okay" ;
+	};
+
+	stk501xx_sar@2C {
+		compatible = "stk,stk501xx_2";
+		reg = <0x2C>;
+
+		stk501xx,irq-gpio = <&ap_gpio 192 0>;
+		chip_name = "STK50153";
+		status = "okay" ;
+	};
+};

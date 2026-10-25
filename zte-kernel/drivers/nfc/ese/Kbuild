@@ -1,0 +1,6 @@
+obj-$(CONFIG_NXP_ESE_P73) += zte_ese.o
+
+BOARD_VENDOR_KERNEL_MODULES +=  $(KERNEL_MODULES_OUT)/zte_ese.ko
+
+zte_ese-$(CONFIG_NXP_ESE_P73) += p73.o
+ccflags-y += -DDYNAMIC_DEBUG_MODULE

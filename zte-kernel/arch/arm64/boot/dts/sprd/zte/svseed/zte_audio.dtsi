@@ -1,0 +1,51 @@
+&i2c2 {
+	fsa4480: fsa4480@42 {
+		status = "okay";
+		compatible = "sprd,fsa4480-i2c";
+		reg = <0x42>;
+	};
+};
+
+&i2c7 {
+	status = "okay";
+	clock-frequency = <400000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	fs16xx@34 {
+		compatible = "foursemi,fs16xx";
+		reg = <0x34>;
+		fsm,rst-gpio = <&ap_gpio 120 0>;
+		status = "okay";
+	};
+
+	fs16xx@35 {
+		compatible = "foursemi,fs16xx";
+		reg = <0x35>;
+		status = "okay";
+	};
+};
+
+&sprd_headset {
+	status = "okay";
+	extcon = <&pmic_typec>;
+	typec-i2c = <1>;
+	sprd,3pole-adc-threshold = <112>;
+	fsa4480-i2c-handle = <&fsa4480>;
+};
+
+&sound_vbc_v4_sprd_codec {
+
+	status = "okay";
+	extral-iic-pa = <2>;
+
+	sprd-audio-card,routing =
+		"HPMIC Pin", "HP Mic Jack",
+		"MIC Pin", "Mic Jack",
+		"MIC2 Pin", "Aux Mic Jack",
+		"MIC3 Pin", "Aux Mic2 Jack",
+		"HeadPhone Jack", "HP Pin",
+		"Ext Spk", "SPK Pin",
+		"Ext Ear", "EAR Pin";
+};
+
+

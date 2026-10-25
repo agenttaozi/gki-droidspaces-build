@@ -1,0 +1,15 @@
+# Windows reserved-device-name paths that Git-for-Windows cannot index/open.
+# None are needed to build the kernel Image (make Image does not compile dts,
+# nouveau is not selected for this tablet, arc headers are not used by arm64).
+zte-kernel/arch/arm64/boot/dts/sprd/aux/
+zte-kernel/drivers/gpu/drm/nouveau/nvkm/subdev/i2c/aux.c
+zte-kernel/drivers/gpu/drm/nouveau/nvkm/subdev/i2c/aux.h
+zte-kernel/include/soc/arc/aux.h
+
+# Documentation is not required to build the Image; skip to shrink the repo.
+zte-kernel/Documentation/
+
+# local build logs (untracked helpers)
+add_log.txt
+add_err.txt
+push_status.txt

@@ -1,0 +1,7 @@
+/*****************************************
+Do not modify dts file, please modify according dtsi file
+******************************************/
+#include "../../ums9620-base-svorange.dts"
+#include "sprd_base_diff.dtsi"
+
+

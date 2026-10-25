@@ -1,0 +1,242 @@
+/ {
+	fragment {
+		target-path = "/";
+		__overlay__ {
+			lcds {
+				lcd_boe_rm69220_ramless_boe_mipi_hdplus_eswin: lcd_boe_rm69220_ramless_boe_mipi_hdplus_eswin {
+					zte,lcd-init-code-version = "20241220_vrr";
+
+					zte,lcd-backlight-register-bit-length = <0x0C>;
+					zte,lcd-backlight-min-value = <0x01>;
+					zte,lcd-disable-ssc;
+					zte,panel-name = "lcd_boe_rm69220_ramless_boe_mipi_hdplus_eswin";
+					zte,lcd-delay-open-bl-value = <51>;
+					zte,lcd-disable-mipi-hop;
+					zte,lcd-reset-down-before-vsp;
+
+					sprd,dsi-work-mode = <1>;
+					sprd,dsi-lane-number = <4>;
+					sprd,dsi-color-format = "dsc";
+					//sprd,dpi-clk-div = <0>;
+					//sprd,video-lp-cmd-enable = <0>;
+					//sprd,video-lp-en-mode = <3>;
+					//sprd,hporch-lp-disable = <0>;
+					sprd,slice-width = <540>;
+					sprd,slice-height = <13>;
+					sprd,output-bpc = <8>;
+					sprd,dsc-enable = <1>;
+					sprd,dual-dsi-enable = <0>;
+					sprd,need-vblank-adj;
+					sprd,vblank-adj-val = <28>;
+
+					sprd,phy-bit-clock = <1120000>;
+					sprd,phy-escape-clock = <20000>;/* kHz */
+
+					sprd,width-mm = <7080>;
+					sprd,height-mm = <15682>;
+
+					sprd,esd-check-enable = <1>;/* 0:close , 1:open */
+					sprd,esd-check-mode = <1>;/* 0:REG ,1:TE  */
+					sprd,esd-check-period = <2000>;
+					sprd,esd-check-register = <0x0A>;
+					sprd,esd-check-value = <0x9C>;
+					sprd,dphy-taget-val = <5>;
+					/* vrr config parameters */
+					sprd,vrr-enabled;
+					sprd,vrr-max-layers = <2>;
+
+					sprd,reset-on-sequence = <1 5>, <0 10>, <1 35>;
+					sprd,reset-off-sequence = <1 20>;
+
+					sprd,use-dcs-write;
+sprd,initial-command = [
+39 00 00 02 FE D0
+39 00 00 02 9B BD
+39 00 00 02 AD 58
+39 00 00 02 AE 09
+39 00 00 02 FE 00
+39 00 00 02 2F 00
+39 00 00 02 FE 40
+39 00 00 02 BF 99
+39 00 00 02 C0 A6
+39 00 00 02 FE 60
+39 00 00 02 C8 43
+39 00 00 02 CB 49
+39 00 00 02 DC 43
+39 00 00 02 DF 49
+39 00 00 02 38 E0
+39 00 00 02 3F 32
+39 00 00 02 00 E0
+39 00 00 02 05 33
+39 00 00 02 76 32
+39 00 00 02 1B C0
+39 00 00 02 1C 00
+39 00 00 02 1D 04
+39 00 00 02 1E 01
+39 00 00 02 1F 00
+39 00 00 02 20 30
+39 00 00 02 21 25
+39 00 00 02 22 51
+39 00 00 02 23 00
+39 00 00 02 55 8C
+39 00 00 02 56 00
+39 00 00 02 58 00
+39 00 00 02 59 0A
+39 00 00 02 5A 00
+39 00 00 02 5B 0C
+39 00 00 02 5C 05
+39 00 00 02 5D 05
+39 00 00 02 5E 00
+39 00 00 02 A9 00
+39 00 00 02 AA 00
+39 00 00 02 FE 62
+39 00 00 02 3D 30
+39 00 00 02 30 31
+39 00 00 02 56 10
+39 00 00 02 BE 00
+39 00 00 02 55 08
+39 00 00 02 FE 60
+39 00 00 02 43 E0
+39 00 00 02 48 32
+39 00 00 02 09 E0
+39 00 00 02 0E 33
+39 00 00 02 7F 32
+39 00 00 02 24 C0
+39 00 00 02 25 00
+39 00 00 02 26 04
+39 00 00 02 27 01
+39 00 00 02 28 40
+39 00 00 02 29 30
+39 00 00 02 2A 9B
+39 00 00 02 2B 50
+39 00 00 02 2D 00
+39 00 00 02 5F 8C
+39 00 00 02 60 00
+39 00 00 02 61 00
+39 00 00 02 62 0A
+39 00 00 02 63 00
+39 00 00 02 64 0C
+39 00 00 02 65 0E
+39 00 00 02 66 0E
+39 00 00 02 67 00
+39 00 00 02 A9 00
+39 00 00 02 AA 00
+39 00 00 02 FE 62
+39 00 00 02 40 30
+39 00 00 02 32 31
+39 00 00 02 56 30
+39 00 00 02 BE 00
+39 00 00 02 55 18
+39 00 00 02 FE 00
+39 00 00 02 FA 01
+39 00 00 02 C1 03
+39 00 00 02 C2 03
+39 00 00 02 35 00
+39 00 00 03 51 00 00
+05 78 00 01 11
+05 20 00 01 29
+];
+
+sprd,sleep-in-command = [
+15 00 00 02 FE 00
+39 0A 00 03 51 00 00
+15 32 00 01 28
+15 32 00 01 10
+39 00 00 02 FE FD
+39 00 00 02 84 A5
+39 64 00 02 85 5A
+39 00 00 02 FE 00
+39 0A 00 02 4F 01
+];
+zte,fps90-to-fps60 = [
+39 00 00 02 FE 00
+15 00 00 02 2F 06
+];
+zte,fps60-to-fps90 = [
+39 00 00 02 FE 00
+15 00 00 02 2F 05
+];
+zte,fps-to-fps120 = [
+39 00 00 02 FE 00
+15 00 00 02 2F 00
+];
+sprd,sleep-out-command = [
+05 50 00 01 11
+05 0A 00 01 29
+];
+					/*
+					sprd,doze-in-command = [
+						15 00 00 02 FE A0
+						15 00 00 02 25 C0
+						15 00 00 02 FE 00
+						05 14 00 01 39
+						39 0A 00 03 44 08 00
+						];
+					sprd,doze-out-command = [
+						15 14 00 02 FE 00
+						39 0A 00 03 51 00 00
+						05 0A 00 01 38
+						15 00 00 02 FE A0
+						15 00 00 02 25 40
+						15 00 00 02 FE 00
+						39 0A 00 03 44 04 b0
+						];
+					zte,dimming-open-command = [
+						15 00 00 02 FE 00
+						15 00 00 02 53 2c
+					];
+					zte,dimming-close-command = [
+						15 00 00 02 FE 00
+						15 00 00 02 53 24
+					];*/
+					display-timings {
+						native-mode = <&lcd_boe_rm69220_ramless_boe_fhd_timing0>;
+						lcd_boe_rm69220_ramless_boe_fhd_timing0: timing0 {
+							clock-frequency = <384000000>;
+							hactive = <1080>;
+							vactive = <2392>;
+							hback-porch = <92>;
+							hfront-porch = <92>;
+							hsync-len = <4>;
+							vsync-len = <4>;
+							vback-porch = <52>;
+							vfront-porch = <2592>;
+						};
+
+						lcd_boe_rm69220_ramless_boe_fhd_timing1: timing1 {
+							clock-frequency = <384000000>;
+							hactive = <1080>;
+							vactive = <2392>;
+							hback-porch = <92>;
+							hfront-porch = <92>;
+							hsync-len = <4>;
+							vsync-len = <4>;
+							vback-porch = <52>;
+							vfront-porch = <912>;
+						};
+
+						lcd_boe_rm69220_ramless_boe_fhd_timing2: timing2 {/* 120HZ */
+							clock-frequency = <384000000>;
+							hactive = <1080>;
+							vactive = <2392>;
+							hback-porch = <92>;
+							hfront-porch = <92>;
+							hsync-len = <4>;
+							vsync-len = <4>;
+							vback-porch = <52>;
+							vfront-porch = <72>;
+						};
+					};
+					oled-backlight {
+						default-brightness-level = <100>;
+						sprd,max-level = <255>;
+						brightness-levels = [
+							39 00 00 03 51 00 00
+							39 00 00 02 53 2C
+						];
+					};
+				};
+			};
+		};
+	};
+};
