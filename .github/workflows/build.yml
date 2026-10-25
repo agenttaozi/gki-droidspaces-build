@@ -110,14 +110,19 @@ jobs:
           grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL|EXTRAVERSION)' Makefile
           scripts/config --disable LOCALVERSION_AUTO
           scripts/config --set-str LOCALVERSION ""
-          # 【v8】开启 Droidspaces 硬必需 + 容器常用选项。v7 已证明纯 stock 基底可启动；
-          # 此版验证"加 PID_NS/IPC_NS 等命名空间后，展锐 .ko 是否仍兼容"。
-          # 暂不开 USER_NS：它改 cred/nsproxy 布局，ABI 风险最大且非 Droidspaces 硬必需，
-          # 留待 v9 单独验证（Docker/沙箱才需要）。
-          scripts/config --enable PID_NS --enable IPC_NS \
-            --enable DEVTMPFS --enable MACVLAN --enable CGROUP_PIDS \
-            --enable CFS_BANDWIDTH --enable IP6_NF_NAT --enable IP6_NF_TARGET_MASQUERADE \
-            --enable IKCONFIG --enable IKCONFIG_PROC --enable SECCOMP --enable SECCOMP_FILTER
+          # === V12: 应用 SYSVIPC KABI 补丁 (开 IPC_NS 不改 task_struct 布局, 模块 ABI 安全) ===
+          git apply ../patches/001.GKI-below-6.12-fix_sysvipc_kabi_6_7_8.patch 2>/dev/null || \
+          git apply patches/001.GKI-below-6.12-fix_sysvipc_kabi_6_7_8.patch 2>/dev/null || \
+            echo "(001.patch 已含或跳过)"
+          # === V12: 全功能开启 (droidspaces 清单 + 命名空间/cgroup/虚拟化/文件系统/网络/安全/BPF) ===
+          # 解析 config/v12.config 每行 CONFIG_X=y -> scripts/config --enable X (纯软件特性, 不碰硬件驱动)
+          echo "--- 应用 V12 特性清单 ($(grep -cE '^CONFIG_[A-Z0-9_]+=y' ../config/v12.config) 项) ---"
+          grep -E '^CONFIG_[A-Z0-9_]+=y' ../config/v12.config | sed -E 's/^CONFIG_//; s/=y$//' | while read -r s; do
+            scripts/config --enable "$s" 2>/dev/null || true
+          done
+          # 关闭 BTF: CI runner 无 pahole, 强制开会导致构建失败 (BTF 非 V12 必需)
+          scripts/config --disable DEBUG_INFO_BTF 2>/dev/null || true
+          echo "--- V12 enable 完成 ---"
           # === 关键修复：关闭 CRC 校验，但【强行保留】vermagic 里的 "modversions" 字样 ===
           # 实测（run 40007810595 产物刷入后抓到的崩溃日志）vermagic 字符串这一关【已经通过】，
           # 卡在了下一关：
@@ -202,6 +207,12 @@ jobs:
           fi
           echo "vermagic OK -> $VM"
           cd ..
+
+      - name: Reassemble boot_a.bin from parts
+        run: |
+          cat assets/boot_a.part* > assets/boot_a.bin
+          ls -l assets/boot_a.bin
+          echo "reassembled boot_a.bin from parts"
 
       - name: Locate boot_a.bin (asset or download)
         run: |
