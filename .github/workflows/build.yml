@@ -42,8 +42,12 @@ jobs:
           set -e
           KS="${{ github.event.inputs.KERNEL_TREE }}"
           cd "$KS"
-          # Git-for-Windows 推送时丢失 +x 位, 在 Linux runner 上 ./scripts/config 报 Permission denied
-          chmod +x ./scripts/config ./scripts/*.pl 2>/dev/null || true
+          # Git-for-Windows 推送时丢失全部 +x 位, Linux runner 上内核构建直接执行的脚本
+          # (scripts/config, cc-version.sh, pahole-flags.sh ...) 会报 Permission denied。一次性把整树加 +x。
+          chmod -R a+x . 2>/dev/null || true
+          # chmod 改了海量文件模式位, 让 git 忽略模式差异, 否则 setlocalversion 会判定脏树并追加 -dirty,
+          # 使 UTS_RELEASE 偏离目标串、preflight 失败。
+          git config core.filemode false 2>/dev/null || true
           # 用【完整原厂 .config】作基底 (含全部 Unisoc 驱动选项, 确保模块_layout 与原厂内核一致)
           cp ../config/w210ds_full.config .config
           ./scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
