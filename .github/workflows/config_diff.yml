@@ -1,0 +1,103 @@
+name: Config diff v10 vs v11 (olddefconfig side effects)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  configdiff:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev wget python3 git ccache \
+            gcc-aarch64-linux-gnu libelf-dev zip curl pkg-config clang-14 lld-14
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/apt/lists/* 2>/dev/null || true
+          echo "PATH=/usr/lib/llvm-14/bin:$PATH" >> "$GITHUB_ENV"
+
+      - name: Clone GKI source
+        run: |
+          set -e
+          git clone --filter=blob:none --no-checkout \
+            https://github.com/KernelSU/kernel_common_mirror common 2>/dev/null || \
+          git clone --filter=blob:none --no-checkout \
+            https://android.googlesource.com/kernel/common common
+          cd common
+          git checkout 4ea0fcb5d1308f2f5a5d || \
+            { git fetch origin 4ea0fcb5d1308f2f5a5d && git checkout FETCH_HEAD; }
+          echo "kernel HEAD = $(git rev-parse HEAD)"
+          cd ..
+
+      - name: Prepare .config (v10 baseline, WITHOUT CFS_BANDWIDTH/CGROUP_PIDS)
+        run: |
+          set -e
+          cp config/w210ds_full.config common/.config
+          cd common
+          scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
+          scripts/config --disable TRIM_UNUSED_KSYMS
+          scripts/config --enable SYSVIPC
+          scripts/config --disable DEBUG_INFO
+          scripts/config --enable LD_IS_LLD
+          sed -i -E 's/^CONFIG_LTO_CLANG_FULL=.*/# CONFIG_LTO_CLANG_FULL is not set/; s/^CONFIG_LTO_NONE=.*/# CONFIG_LTO_NONE is not set/' .config
+          printf 'CONFIG_LTO_CLANG_THIN=y\n' >> .config
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
+          sed -i -E 's/^VERSION[[:space:]]*=.*/VERSION = 5/' Makefile
+          sed -i -E 's/^PATCHLEVEL[[:space:]]*=.*/PATCHLEVEL = 15/' Makefile
+          sed -i -E 's/^SUBLEVEL[[:space:]]*=.*/SUBLEVEL = 178/' Makefile
+          sed -i -E 's/^EXTRAVERSION[[:space:]]*=.*/EXTRAVERSION = -android13-8-gb370d3baf5b7-ab20251103.222925/' Makefile
+          find . -maxdepth 1 -name 'localversion*' -not -name '*.c' -delete 2>/dev/null || true
+          scripts/config --disable LOCALVERSION_AUTO
+          scripts/config --set-str LOCALVERSION ""
+          scripts/config --enable SYSVIPC --enable POSIX_MQUEUE \
+            --enable PID_NS --enable IPC_NS \
+            --enable DEVTMPFS --enable DEVTMPFS_MOUNT \
+            --enable NETFILTER_XT_MATCH_ADDRTYPE \
+            --enable IKCONFIG --enable IKCONFIG_PROC --enable SECCOMP --enable SECCOMP_FILTER
+          scripts/config --enable USER_NS --enable OVERLAY_FS \
+            --enable VETH --enable BRIDGE --enable BRIDGE_NETFILTER \
+            --enable MACVLAN --enable IPVLAN \
+            --enable IP6_NF_NAT --enable IP6_NF_TARGET_MASQUERADE \
+            --enable TUN --enable FUSE_FS --enable BLK_DEV_LOOP \
+            --enable CPUSETS --enable MEMCG --enable MEMCG_SWAP --enable MEMCG_SWAP_ENABLED \
+            --enable CGROUP_SCHED --enable CGROUP_FREEZER --enable CGROUP_DEVICE \
+            --enable CGROUP_NET_PRIO --enable CGROUP_CPUACCT \
+            --enable CGROUP_BPF --enable NET_CLS_ACT --enable NET_SCH_INGRESS
+          # <<< v10 baseline: 不开 CFS_BANDWIDTH / CGROUP_PIDS >>>
+          scripts/config --enable VHOST --enable VHOST_NET \
+            --enable VIRTIO --enable VIRTIO_PCI --enable VIRTIO_PCI_LEGACY --enable VIRTIO_MMIO \
+            --enable VIRTIO_NET --enable VIRTIO_BLK --enable VIRTIO_CONSOLE \
+            --enable VIRTIO_BALLOON --enable VIRTIO_INPUT --enable HW_RANDOM_VIRTIO \
+            --enable 9P_FS --enable NET_9P --enable NET_9P_VIRTIO --enable PCI_HOST_GENERIC
+          scripts/config --disable MODVERSIONS
+          scripts/config --enable MODULE_UNLOAD
+          sed -i 's|#define MODULE_VERMAGIC_MODVERSIONS ""|#define MODULE_VERMAGIC_MODVERSIONS "modversions "|' include/linux/vermagic.h
+          if scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
+          cp .config /tmp/config_v10.txt
+          echo "=== v10 baseline config saved: $(wc -l < /tmp/config_v10.txt) lines ==="
+
+      - name: Incremental enable + olddefconfig = v11
+        run: |
+          set -e
+          cd common
+          scripts/config --enable CFS_BANDWIDTH --enable CGROUP_PIDS
+          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
+          cp .config /tmp/config_v11.txt
+          echo "=== v11 config saved: $(wc -l < /tmp/config_v11.txt) lines ==="
+          echo "=== DIFF (v10 -> v11) ==="
+          diff -u /tmp/config_v10.txt /tmp/config_v11.txt | head -400 || true
+          echo "=== END DIFF ==="
+          grep -E "CFS_BANDWIDTH|CGROUP_PIDS|FAIR_GROUP_SCHED|SCHED_AUTOGROUP|SCHED_HRTICK|CFS_BANDWIDTH" /tmp/config_v11.txt
+
+      - name: Upload both configs
+        uses: actions/upload-artifact@v4
+        with:
+          name: config_diff_v10_v11
+          path: |
+            /tmp/config_v10.txt
+            /tmp/config_v11.txt
