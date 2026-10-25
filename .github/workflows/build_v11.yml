@@ -11,6 +11,14 @@ on:
         description: "GKI 源码提交 (默认对应你设备的 5.15.178 android13-5.15-2025-03_r6)"
         required: false
         default: "4ea0fcb5d1308f2f5a5d"
+      CPU_LIMITS:
+        description: "开启 CONFIG_CFS_BANDWIDTH (Droidspaces --cpus)。二分实验用: true/false"
+        required: true
+        default: "true"
+      PIDS_LIMITS:
+        description: "开启 CONFIG_CGROUP_PIDS (Droidspaces --pids-limit)。二分实验用: true/false"
+        required: true
+        default: "true"
 
 jobs:
   build:
@@ -128,13 +136,26 @@ jobs:
             --enable CGROUP_SCHED --enable CGROUP_FREEZER --enable CGROUP_DEVICE \
             --enable CGROUP_NET_PRIO --enable CGROUP_CPUACCT \
             --enable CGROUP_BPF --enable NET_CLS_ACT --enable NET_SCH_INGRESS
-          # 【v11 新增】cgroup cpu/pids 限制（v8 bootloop 元凶，v11 在 MODVERSIONS 关闭前提下重开）
+          # 【v11 新增】cgroup cpu/pids 限制（可由输入开关做二分实验定位 bootloop）
           # CFS_BANDWIDTH 依赖 FAIR_GROUP_SCHED（基底 config 已 y，olddefconfig 保持）
           # CGROUP_PIDS 提供 pids.max（Droidspaces --pids-limit）
           # 风险控制：v9 起已关闭 CONFIG_MODVERSIONS + 保留 vermagic "modversions" 字样，
           # 原厂 .ko 不再做符号 CRC 校验（check_version 被 #ifdef 掉），仅要求整串 vermagic 相等；
           # 且已从 ZTE 源码树核实无展锐驱动直接访问 cfs_rq/sched_entity/task_group 等 scheduler 内部结构。
-          scripts/config --enable CFS_BANDWIDTH --enable CGROUP_PIDS
+          if [ "${{ github.event.inputs.CPU_LIMITS }}" = "true" ]; then
+            scripts/config --enable CFS_BANDWIDTH
+            echo "CFS_BANDWIDTH enabled"
+          else
+            scripts/config --disable CFS_BANDWIDTH
+            echo "CFS_BANDWIDTH DISABLED (bisect experiment)"
+          fi
+          if [ "${{ github.event.inputs.PIDS_LIMITS }}" = "true" ]; then
+            scripts/config --enable CGROUP_PIDS
+            echo "CGROUP_PIDS enabled"
+          else
+            scripts/config --disable CGROUP_PIDS
+            echo "CGROUP_PIDS DISABLED (bisect experiment)"
+          fi
           # C. 虚拟化/KVM(v10 已验证层)
           scripts/config --enable VHOST --enable VHOST_NET \
             --enable VIRTIO --enable VIRTIO_PCI --enable VIRTIO_PCI_LEGACY --enable VIRTIO_MMIO \
@@ -242,14 +263,24 @@ jobs:
             v=$(grep -E "^CONFIG_${k}=" common/.config | head -1)
             echo "$k -> ${v:-NOT_SET}"
           done
-          # v11 硬约束:CFS_BANDWIDTH/CGROUP_PIDS 必须开启（Droidspaces --cpus / --pids-limit）
+          # v11 硬约束(可通过输入开关关闭做二分实验):CFS_BANDWIDTH/CGROUP_PIDS 必须开启（Droidspaces --cpus / --pids-limit）
           # 前提：MODVERSIONS 已关闭（上方校验），否则约4000符号CRC变化→原厂.ko拒绝加载→bootloop
-          for k in CFS_BANDWIDTH CGROUP_PIDS; do
-            if ! grep -qE "^CONFIG_${k}=y" common/.config; then
-              echo "ERROR: CONFIG_${k} 未开启，--cpus/--pids-limit 仍不可用"; exit 1
+          if [ "${{ github.event.inputs.CPU_LIMITS }}" = "true" ]; then
+            if ! grep -qE "^CONFIG_CFS_BANDWIDTH=y" common/.config; then
+              echo "ERROR: CONFIG_CFS_BANDWIDTH 未开启，--cpus 仍不可用"; exit 1
             fi
-            echo "$k -> enabled (v11)"
-          done
+            echo "CFS_BANDWIDTH -> enabled (v11)"
+          else
+            echo "CFS_BANDWIDTH -> disabled (bisect experiment)"
+          fi
+          if [ "${{ github.event.inputs.PIDS_LIMITS }}" = "true" ]; then
+            if ! grep -qE "^CONFIG_CGROUP_PIDS=y" common/.config; then
+              echo "ERROR: CONFIG_CGROUP_PIDS 未开启，--pids-limit 仍不可用"; exit 1
+            fi
+            echo "CGROUP_PIDS -> enabled (v11)"
+          else
+            echo "CGROUP_PIDS -> disabled (bisect experiment)"
+          fi
           # MODVERSIONS 必须关闭：否则 module_layout 的 CRC 与原厂 .ko 不符，insmod 依旧失败
           if grep -qE '^CONFIG_MODVERSIONS=y' common/.config; then
             echo "ERROR: CONFIG_MODVERSIONS 未关闭，module_layout CRC 校验会让原厂模块加载失败"; exit 1
@@ -334,19 +365,25 @@ jobs:
       - name: Repack boot image (byte-level kernel swap)
         run: |
           set -e
-          python3 scripts/repack.py "$BOOT" "$KERNEL" boot_a_droidspaces_v11.img
-          ls -la boot_a_droidspaces_v11.img
+          # 实验后缀：区分二分实验产物（cpu/pids 开关组合）
+          SUF="cpupids"
+          if [ "${{ github.event.inputs.CPU_LIMITS }}" != "true" ] && [ "${{ github.event.inputs.PIDS_LIMITS }}" != "true" ]; then SUF="none";
+          elif [ "${{ github.event.inputs.CPU_LIMITS }}" != "true" ]; then SUF="pidsonly";
+          elif [ "${{ github.event.inputs.PIDS_LIMITS }}" != "true" ]; then SUF="cpuonly"; fi
+          echo "VARIANT=$SUF" >> "$GITHUB_ENV"
+          python3 scripts/repack.py "$BOOT" "$KERNEL" "boot_a_droidspaces_v11_${SUF}.img"
+          ls -la boot_a_droidspaces_v11_${SUF}.img
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: boot_a_droidspaces_v11.img
-          path: boot_a_droidspaces_v11.img
+          name: boot_a_droidspaces_v11_${{ env.VARIANT }}.img
+          path: boot_a_droidspaces_v11_${{ env.VARIANT }}.img
 
       - name: Upload vendor modules (本地 repack vendor_boot 用)
         uses: actions/upload-artifact@v4
         with:
-          name: w210ds_v11_vendor_modules
+          name: w210ds_v11_vendor_modules_${{ env.VARIANT }}
           path: |
             common/drivers/unisoc_platform/sched/unisoc-sched.ko
             common/drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko
@@ -360,10 +397,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          TAG=w210ds-v11
+          TAG=w210ds-v11-${{ env.VARIANT }}
           gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" -y 2>/dev/null || true
           git -C "$GITHUB_WORKSPACE" push --delete origin "$TAG" 2>/dev/null || true
-          gh release create "$TAG" boot_a_droidspaces_v11.img \
+          gh release create "$TAG" "boot_a_droidspaces_v11_${{ env.VARIANT }}.img" \
             common/drivers/unisoc_platform/sched/unisoc-sched.ko \
             common/drivers/unisoc_platform/sysdump/unisoc_last_kmsg.ko \
             common/drivers/unisoc_platform/sysdump/sysdump.ko \
@@ -371,5 +408,5 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "W210DS Droidspaces boot v11 (full + cgroup cpu/pids limits)" \
             --notes "v11 = v10 全功能版 + CONFIG_CFS_BANDWIDTH + CONFIG_CGROUP_PIDS（Droidspaces --cpus / --pids-limit）。MODVERSIONS 关闭 + vermagic 保留 modversions 字样，原厂 vendor_dlkm .ko 无 CRC 校验直接加载。unisoc-sched.ko / unisoc_last_kmsg.ko / sysdump.ko / native_hang_monitor.ko 为按新 scheduler 结构体重编的厂商模块，需一并替换进 vendor_boot ramdisk（用 scripts/repack_vendor_boot.py 重打包 vendor_boot_a）。刷入前请确认设备处于 A/B 安全槽（boot_a + vendor_boot_a）。"
-          echo "RELEASE_URL=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/boot_a_droidspaces_v11.img" >> "$GITHUB_ENV"
+          echo "RELEASE_URL=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/boot_a_droidspaces_v11_${{ env.VARIANT }}.img" >> "$GITHUB_ENV"
           echo "成品下载地址: $RELEASE_URL"
