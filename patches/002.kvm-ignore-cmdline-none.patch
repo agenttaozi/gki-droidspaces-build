@@ -1,0 +1,16 @@
+--- a/arch/arm64/kvm/arm.c
++++ b/arch/arm64/kvm/arm.c
+@@ -2334,7 +2334,12 @@
+ 		return -EINVAL;
+ 
+ 	if (strcmp(arg, "none") == 0) {
+-		kvm_mode = KVM_MODE_NONE;
++		/*
++		 * ZTE LK always appends "kvm-arm.mode=none" to the command line;
++		 * honouring it would disable KVM entirely. Keep the built-in
++		 * default (protected/nvhe) so KVM still initialises.
++		 */
++		pr_info("kvm: ignoring kvm-arm.mode=none from bootloader" "\n");
+ 		return 0;
+ 	}
+ 
