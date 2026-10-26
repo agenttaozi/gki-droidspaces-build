@@ -202,6 +202,15 @@ jobs:
           else
             echo "SYSVIPC=off -> 跳过 001.patch"
           fi
+          # === KVM 命令行修复(必须成功): LK 会追加 kvm-arm.mode=none 把 KVM 关掉 ===
+          # 实机 dmesg 证据: "kvm [1]: KVM disabled from command line"
+          # 原厂内核因运行在 EL1 使内置 cmdline 的 protected 生效; 我们这版落在 VHE 分支 -> protected 被拒 -> none 残留
+          patch -p1 -d "$KS" < ../patches/002.kvm-ignore-cmdline-none.patch 2>/dev/null || \
+            echo "(002.patch 可能已应用)"
+          if ! grep -q 'ignoring kvm-arm.mode=none' "$KS/arch/arm64/kvm/arm.c"; then
+            echo "ERROR: 002.patch 未生效, 构建出的内核会被 kvm-arm.mode=none 关掉 KVM"; exit 1
+          fi
+          echo "002.patch OK -> kvm 将忽略 bootloader 的 kvm-arm.mode=none"
           # === 应用增量配置清单 (可用 workflow 输入 CONFIG_FILE 切换) ===
           CFG="${{ github.event.inputs.CONFIG_FILE }}"
           if [ -z "$CFG" ]; then CFG="w210ds_virt.config"; fi
