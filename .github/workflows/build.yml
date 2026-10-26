@@ -194,20 +194,22 @@ jobs:
           ./scripts/config --disable LOCALVERSION_AUTO
           ./scripts/config --set-str LOCALVERSION ""
           # === SYSVIPC KABI 补丁: 开 IPC_NS 不改 task_struct 布局, 保护原厂 .ko ABI ===
-          # 打进 zte-kernel/ 子目录 (--directory), 失败则 patch -p1 兜底, 再不行跳过
+          # 注意: 本步骤开头已 cd "$KS", 直接用 -p1 打当前目录; 再写 -d "$KS" 会变成 zte-kernel/zte-kernel(不存在)
           if [ "$SV" = "on" ]; then
-            git apply --directory="$KS" ../patches/001.patch 2>/dev/null || \
-            patch -p1 -d "$KS" < ../patches/001.patch 2>/dev/null || \
-              echo "(001.patch 已含或跳过)"
+            patch -p1 < ../patches/001.patch || echo "(001.patch 已含或跳过)"
+            if grep -q 'ANDROID_KABI_USE(6, struct sysv_sem sysvsem)' include/linux/sched.h; then
+              echo "001.patch OK -> sysv_sem/sysv_shm 放进 KABI 保留位"
+            else
+              echo "WARN: 001.patch 未生效(task_struct 布局会变; MODVERSIONS=n 下仍可启动)"
+            fi
           else
             echo "SYSVIPC=off -> 跳过 001.patch"
           fi
           # === KVM 命令行修复(必须成功): LK 会追加 kvm-arm.mode=none 把 KVM 关掉 ===
           # 实机 dmesg 证据: "kvm [1]: KVM disabled from command line"
           # 原厂内核因运行在 EL1 使内置 cmdline 的 protected 生效; 我们这版落在 VHE 分支 -> protected 被拒 -> none 残留
-          patch -p1 -d "$KS" < ../patches/002.kvm-ignore-cmdline-none.patch 2>/dev/null || \
-            echo "(002.patch 可能已应用)"
-          if ! grep -q 'ignoring kvm-arm.mode=none' "$KS/arch/arm64/kvm/arm.c"; then
+          patch -p1 < ../patches/002.kvm-ignore-cmdline-none.patch || echo "(002.patch 可能已应用)"
+          if ! grep -q 'ignoring kvm-arm.mode=none' arch/arm64/kvm/arm.c; then
             echo "ERROR: 002.patch 未生效, 构建出的内核会被 kvm-arm.mode=none 关掉 KVM"; exit 1
           fi
           echo "002.patch OK -> kvm 将忽略 bootloader 的 kvm-arm.mode=none"
