@@ -15,6 +15,10 @@ on:
         description: "增量配置文件名(config/ 下): w210ds_virt.config=全功能(诊断) | w210ds_v10parity.config=V10全等保底"
         required: false
         default: "w210ds_virt.config"
+      LTO_MODE:
+        description: "LTO 模式: thin(默认,省内存) | full(对齐原厂) | none(关闭)"
+        required: false
+        default: "thin"
 
 jobs:
   build:
@@ -35,6 +39,14 @@ jobs:
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
           echo "PATH=/usr/lib/llvm-14/bin:$PATH" >> "$GITHUB_ENV"
+
+      - name: Add swap (LTO=FULL 链接阶段内存峰值高, 防止 OOM)
+        run: |
+          sudo fallocate -l 16G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=16384
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
 
       - name: Compiler = clang-14 (apt) —— UTS_RELEASE 精确匹配原厂, 编译器小版本不影响模块 vermagic
         run: |
@@ -63,16 +75,26 @@ jobs:
           ./scripts/config --enable SYSVIPC
           ./scripts/config --disable DEBUG_INFO
           ./scripts/config --enable LD_IS_LLD
-          # 改用 LTO_CLANG_THIN (原厂 FULL 在 7GB runner 会 OOM; THIN 链接内存峰值低得多)
-          sed -i -E 's/^CONFIG_LTO_CLANG_FULL=.*/# CONFIG_LTO_CLANG_FULL is not set/; s/^CONFIG_LTO_NONE=.*/# CONFIG_LTO_NONE is not set/' .config
-          printf 'CONFIG_LTO_CLANG_THIN=y\n' >> .config
+          # === LTO 模式(可切换): 原厂=FULL; 我们曾用 THIN 省内存, 但 B 版实测"纯原厂配置"也无 /dev/kvm,
+          #     说明 KVM 失效来自构建链而非配置。LTO 是最可能改变 nVHE hyp 代码生成的项, 故参数化验证。===
+          LTO="${{ github.event.inputs.LTO_MODE }}"
+          if [ -z "$LTO" ]; then LTO="thin"; fi
+          echo "LTO_MODE = $LTO"
+          sed -i -E 's/^CONFIG_LTO_CLANG_FULL=.*/# CONFIG_LTO_CLANG_FULL is not set/; s/^CONFIG_LTO_CLANG_THIN=.*/# CONFIG_LTO_CLANG_THIN is not set/; s/^CONFIG_LTO_NONE=.*/# CONFIG_LTO_NONE is not set/' .config
+          case "$LTO" in
+            full) printf 'CONFIG_LTO_CLANG_FULL=y\n' >> .config ;;
+            thin) printf 'CONFIG_LTO_CLANG_THIN=y\n' >> .config ;;
+            none) printf 'CONFIG_LTO_NONE=y\n' >> .config ;;
+            *) echo "ERROR: 未知 LTO_MODE=$LTO"; exit 1 ;;
+          esac
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
-          if grep -qE '^CONFIG_LTO_CLANG_FULL=y' .config; then
-            echo "ERROR: LTO_CLANG_FULL 仍存在(会 OOM)"; grep -E 'CONFIG_LTO' .config; exit 1
-          fi
-          if ! grep -qE '^CONFIG_LTO_CLANG_THIN=y' .config; then
-            echo "ERROR: LTO_CLANG_THIN 未启用"; grep -E 'CONFIG_LTO' .config; exit 1
-          fi
+          echo "--- 实际 LTO 配置 ---"
+          grep -E '^CONFIG_(LTO|LTO_CLANG|CFI)' .config || true
+          case "$LTO" in
+            full) grep -qE '^CONFIG_LTO_CLANG_FULL=y' .config || { echo "ERROR: LTO_CLANG_FULL 未生效"; exit 1; } ;;
+            thin) grep -qE '^CONFIG_LTO_CLANG_THIN=y' .config || { echo "ERROR: LTO_CLANG_THIN 未生效"; exit 1; } ;;
+            none) grep -qE '^CONFIG_LTO_NONE=y' .config || { echo "ERROR: LTO_NONE 未生效"; exit 1; } ;;
+          esac
           # === 关键: UTS_RELEASE 精确匹配原厂 vendor_boot 里的 .ko 模块 ===
           # 模块 vermagic 唯一且均为:
           #   "5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925 SMP preempt mod_unload modversions aarch64"
