@@ -16,6 +16,9 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     timeout-minutes: 360
+    permissions:
+      contents: write   # 创建/更新 Release 与上传 asset 需要
+      actions: read
     steps:
       - name: Checkout this repo (含中兴开源内核树 zte-kernel/)
         uses: actions/checkout@v4
@@ -144,6 +147,14 @@ jobs:
           if grep -qE '^CONFIG_MODVERSIONS=y' "$KS/.config"; then
             echo "ERROR: CONFIG_MODVERSIONS 未关闭"; exit 1
           fi
+          # === ABI 硬保护: 这两项会改变 task_struct / cfs_rq 布局, 原厂预编译 .ko 会踩错偏移直接崩(V10 时代的血泪) ===
+          # 关 MODVERSIONS 只能绕过 CRC 校验, 绕不过结构体布局变化, 必须彻底不启用。
+          for k in CGROUP_PIDS CFS_BANDWIDTH; do
+            if grep -qE "^CONFIG_${k}=y" "$KS/.config"; then
+              echo "ERROR: CONFIG_${k}=y 会破坏原厂 .ko ABI -> bootloop, 必须关闭"; exit 1
+            fi
+            echo "$k -> (correctly not set, ABI-safe)"
+          done
 
       - name: Build uncompressed Image (clang-14, 中兴开源树)
         run: |
