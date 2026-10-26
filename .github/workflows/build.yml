@@ -118,13 +118,13 @@ jobs:
               chmod +x "$HOME/tc/bin/$t"
             fi
           done
-          ls -la "$HOME/tc/bin" | head -15
-          "$HOME/tc/bin/clang" --version | head -2
+          ls -la "$HOME/tc/bin" | head -15 || true
+          "$HOME/tc/bin/clang" --version 2>&1 | head -2 || true
           echo "--- kbuild 编译器识别自检 (期望输出 Clang 14 0 7) ---"
           printf '#if defined(__clang__)\nClang __clang_major__ __clang_minor__ __clang_patchlevel__\n#endif\n' \
-            | "$HOME/tc/bin/clang" -E -P -x c -
+            | "$HOME/tc/bin/clang" -E -P -x c - 2>&1 | head -5 || true
           if ! printf '#if defined(__clang__)\nClang __clang_major__ __clang_minor__ __clang_patchlevel__\n#endif\n' \
-              | "$HOME/tc/bin/clang" -E -P -x c - | grep -q '^Clang 14'; then
+              | "$HOME/tc/bin/clang" -E -P -x c - 2>/dev/null | grep -q '^Clang 14'; then
             echo "::warning::Android clang 自检失败, 回退到 apt clang-14"
             exit 0
           fi
