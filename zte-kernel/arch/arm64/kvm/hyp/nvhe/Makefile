@@ -89,7 +89,12 @@ quiet_cmd_hypcopy = HYPCOPY $@
 
 # Remove ftrace, Shadow Call Stack, and CFI CFLAGS.
 # This is equivalent to the 'notrace', '__noscs', and '__nocfi' annotations.
-KBUILD_CFLAGS := $(filter-out $(CC_FLAGS_FTRACE) $(CC_FLAGS_SCS) $(CC_FLAGS_CFI), $(KBUILD_CFLAGS))
+# ALSO remove LTO: the nVHE hyp image is partially linked with `ld -r -T hyp.lds`
+# and its symbol table is consumed by gen-hyprel/objcopy --prefix-symbols.
+# Compiling it with LTO breaks that (symbols get internalized / sections merged),
+# which makes kvm_hyp_init() fail at runtime -> KVM never registers /dev/kvm
+# (symptom: /sys/class/misc/kvm missing while CONFIG_KVM=y).
+KBUILD_CFLAGS := $(filter-out $(CC_FLAGS_FTRACE) $(CC_FLAGS_SCS) $(CC_FLAGS_CFI) $(CC_FLAGS_LTO), $(KBUILD_CFLAGS))
 # Starting from 13.0.0 llvm emits SHT_REL section '.llvm.call-graph-profile'
 # when profile optimization is applied. gen-hyprel does not support SHT_REL and
 # causes a build failure. Remove profile optimization flags.
