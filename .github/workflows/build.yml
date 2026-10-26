@@ -90,6 +90,17 @@ jobs:
           done
           # 关闭 BTF: CI runner 无 pahole, 强制开会导致构建失败 (BTF 非必需)
           ./scripts/config --disable DEBUG_INFO_BTF 2>/dev/null || true
+          # === 体积收紧: 把 Image 压回出厂槽位 ===
+          # boot_a 尾部紧跟 AVB vbmeta+签名(我们在 CI 里没有中兴私钥, 无法重签, 也不能改动该布局),
+          # 所以内核必须 <= 出厂 kernel_size 对齐槽位(47443968B)。以下均为"零/低功能损失"裁剪:
+          #   KALLSYMS_ALL  仅影响 /proc/kallsyms 是否含全部符号(调试用) —— 无功能损失
+          #   FUNCTION_TRACER 仅 ftrace 函数追踪框架(调试用) —— 无功能损失
+          #   CIFS          SMB/CIFS 网络共享(与容器/虚拟化无关) —— 牺牲
+          #   SQUASHFS      squashfs 只读镜像(容器多用 overlay/erofs) —— 牺牲
+          ./scripts/config --disable KALLSYMS_ALL 2>/dev/null || true
+          ./scripts/config --disable FUNCTION_TRACER 2>/dev/null || true
+          ./scripts/config --disable CIFS 2>/dev/null || true
+          ./scripts/config --disable SQUASHFS 2>/dev/null || true
           # === 关键修复: 关闭 CRC 校验, 但强行保留 vermagic 里的 "modversions" 字样 ===
           # 新增命名空间等会改变 nsproxy/cred 布局, 原厂 .ko 的 module_layout CRC 对不上;
           # 关 MODVERSIONS 让内核不再做 CRC 校验, 同时保留 "modversions" 字符串使 vermagic 整串全等。
@@ -148,12 +159,13 @@ jobs:
           grep -n '^extra-y' usr/include/Makefile || true
           make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 CC_ARM32=clang -j"$(nproc)" Image
           ls -la arch/arm64/boot/Image
-          echo "=== Image 体积闸门 (原厂槽位预算 47443968 字节) ==="
+          echo "=== Image 体积闸门 (出厂内核槽位 47443968 字节) ==="
+          # boot_a 槽位之后紧跟 AVB vbmeta+签名(无中兴私钥无法重签), 故内核必须 <= 出厂槽位。
           SZ=$(stat -c%s arch/arm64/boot/Image)
           BUDGET=47443968
           echo "Image size = $SZ bytes"
           if [ "$SZ" -gt "$BUDGET" ]; then
-            echo "ERROR: Image $SZ > 槽位 $BUDGET, 必须精简配置(关掉部分文件系统/调试)后重试"; exit 1
+            echo "ERROR: Image $SZ > 出厂槽位 $BUDGET, 必须精简配置后重试"; exit 1
           fi
           echo "Image 体积 OK (余量 $((BUDGET-SZ)) 字节)"
           echo "=== 校验产物 vermagic 精确匹配原厂模块 ==="
