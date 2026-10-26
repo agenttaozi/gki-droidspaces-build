@@ -99,6 +99,8 @@ jobs:
           done
           # 挂死检测超时压到 60s(诊断需要快速触发 panic 拿栈; 无副作用)
           ./scripts/config --set-val DEFAULT_HUNG_TASK_TIMEOUT 60 2>/dev/null || true
+          # 允许 adb shell 读 dmesg(原厂 user build 默认 restrict, 诊断期必须关; 定位后可恢复)
+          ./scripts/config --disable SECURITY_DMESG_RESTRICT 2>/dev/null || true
           # 关闭 BTF: CI runner 无 pahole, 强制开会导致构建失败 (BTF 非必需)
           ./scripts/config --disable DEBUG_INFO_BTF 2>/dev/null || true
           # === 体积收紧: 把 Image 压回出厂槽位 ===
