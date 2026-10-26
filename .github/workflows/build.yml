@@ -41,15 +41,15 @@ jobs:
           echo "PATH=/usr/lib/llvm-14/bin:$PATH" >> "$GITHUB_ENV"
 
       - name: Add swap (LTO=FULL 链接阶段内存峰值高, 防止 OOM)
+        continue-on-error: true
         run: |
-          # runner 上 /swapfile 可能已存在且在用(Text file busy), 用独立文件名并全程容错
+          # 注意: runner 沙箱里 swapon 可能挂住, 每条都加 timeout 且整步允许失败
           SW=/swapfile-wb
-          if [ -e "$SW" ]; then sudo swapoff "$SW" 2>/dev/null || true; sudo rm -f "$SW" 2>/dev/null || true; fi
-          sudo fallocate -l 16G "$SW" 2>/dev/null || sudo dd if=/dev/zero of="$SW" bs=1M count=16384 2>/dev/null || true
-          sudo chmod 600 "$SW" 2>/dev/null || true
-          sudo mkswap "$SW" 2>/dev/null || true
-          sudo swapon "$SW" 2>/dev/null || true
-          (free -h; echo '--- swap ---'; swapon --show) || true
+          ( timeout 90 sudo fallocate -l 8G "$SW" ) 2>/dev/null || ( timeout 90 sudo dd if=/dev/zero of="$SW" bs=1M count=8192 ) 2>/dev/null || true
+          ( timeout 30 sudo chmod 600 "$SW" ) 2>/dev/null || true
+          ( timeout 30 sudo mkswap "$SW" ) 2>/dev/null || true
+          ( timeout 60 sudo swapon "$SW" ) 2>/dev/null || true
+          ( free -h; echo '--- swap ---'; swapon --show ) || true
 
       - name: Compiler = clang-14 (apt) —— UTS_RELEASE 精确匹配原厂, 编译器小版本不影响模块 vermagic
         run: |
