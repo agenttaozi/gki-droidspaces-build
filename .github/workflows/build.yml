@@ -95,11 +95,28 @@ jobs:
             echo "::warning::Android clang 下载失败, 回退到 apt clang-14 (构建继续, 但工具链与原厂不同)"
             exit 0
           fi
-          "$DEST/bin/clang" --version | head -2
-          "$DEST/bin/ld.lld" --version | head -1
-          echo "PATH=$DEST/bin:$PATH" >> "$GITHUB_ENV"
-          echo "CLANG_CC=$DEST/bin/clang" >> "$GITHUB_ENV"
-          echo "CLANG_LD=$DEST/bin/ld.lld" >> "$GITHUB_ENV"
+          # AOSP clang 依赖 lib64/libLLVM-14git.so; 不在 rpath 里时必须显式给 LD_LIBRARY_PATH,
+          # 否则 clang 一启动就挂 -> kconfig 报 "unknown compiler"。用包装脚本统一注入。
+          mkdir -p "$HOME/tc/bin"
+          for t in clang clang++ ld.lld llvm-ar llvm-nm llvm-objcopy llvm-objdump llvm-strip llvm-readelf llvm-as llvm-link; do
+            if [ -x "$DEST/bin/$t" ] && [ ! -d "$DEST/bin/$t" ]; then
+              printf '#!/bin/sh\nexport LD_LIBRARY_PATH="%s/lib64:%s/lib:$LD_LIBRARY_PATH"\nexec "%s/bin/%s" "$@"\n' \
+                "$DEST" "$DEST" "$DEST" "$t" > "$HOME/tc/bin/$t"
+              chmod +x "$HOME/tc/bin/$t"
+            fi
+          done
+          "$HOME/tc/bin/clang" --version | head -2
+          echo "--- kbuild 编译器识别自检 (期望输出 Clang 14 0 7) ---"
+          printf '#if defined(__clang__)\nClang __clang_major__ __clang_minor__ __clang_patchlevel__\n#endif\n' \
+            | "$HOME/tc/bin/clang" -E -P -x c -
+          if ! printf '#if defined(__clang__)\nClang __clang_major__ __clang_minor__ __clang_patchlevel__\n#endif\n' \
+              | "$HOME/tc/bin/clang" -E -P -x c - | grep -q '^Clang 14'; then
+            echo "::warning::Android clang 自检失败, 回退到 apt clang-14"
+            exit 0
+          fi
+          echo "PATH=$HOME/tc/bin:$DEST/bin:$PATH" >> "$GITHUB_ENV"
+          echo "CLANG_CC=$HOME/tc/bin/clang" >> "$GITHUB_ENV"
+          echo "CLANG_LD=$HOME/tc/bin/ld.lld" >> "$GITHUB_ENV"
           echo "CLANG_TAG=android-r450784e" >> "$GITHUB_ENV"
 
       - name: Prepare .config from 设备真实 w210ds_full.config + 开启虚拟化/跨平台 (基于中兴开源源码)
