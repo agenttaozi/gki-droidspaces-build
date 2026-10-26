@@ -74,26 +74,33 @@ jobs:
       - name: Toolchain = Android clang r450784e (原厂同款 14.0.7)
         if: ${{ github.event.inputs.CLANG == 'android' }}
         run: |
-          set -e
           # 原厂内核 CC_VERSION_TEXT = "Android (8508608, based on r450784e) clang version 14.0.7"
-          # 我们的 apt clang 是 14.0.0, nVHE hyp(EL2) 代码生成对编译器补丁级别敏感, 故提供原厂同款工具链开关
+          # apt 的 Ubuntu clang 是 14.0.0; nVHE hyp(EL2) 代码生成可能对编译器补丁级别敏感
+          # googlesource 的 +archive 在本 runner 返回 400, 故改用 GitHub 上的 AOSP prebuilts 镜像
           DEST="$HOME/clang-r450784e"
           mkdir -p "$DEST"
           ok=0
-          for URL in \
-            "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r450784e.tar.gz" \
-            "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android13-release/clang-r450784e.tar.gz" ; do
-            echo "try $URL"
-            if curl -fL --retry 2 --retry-delay 3 -m 1500 "$URL" -o /tmp/clang-r450784e.tgz; then ok=1; break; fi
+          for U in \
+            "https://codeload.github.com/snove520/clang-r450784e/tar.gz/refs/heads/main" \
+            "https://codeload.github.com/chongqing-dev/prebuilts_clang_kernel_r450784e/tar.gz/refs/heads/lineage-22.2" \
+            "https://codeload.github.com/LeafOS-experimental/android_prebuilts_clang_kernel_linux-x86_clang-r450784e/tar.gz/refs/heads/leaf-4.0" ; do
+            echo "try $U"
+            if curl -fL --retry 2 --retry-delay 5 -m 2400 "$U" -o /tmp/clang.tgz; then
+              ls -la /tmp/clang.tgz
+              if tar -xzf /tmp/clang.tgz -C "$DEST" --strip-components=1 2>/dev/null; then ok=1; break; fi
+              echo "  解包失败, 试下一个"
+            fi
           done
-          if [ "$ok" != "1" ]; then echo "ERROR: 下载 Android clang 失败"; exit 1; fi
-          ls -la /tmp/clang-r450784e.tgz
-          tar -xzf /tmp/clang-r450784e.tgz -C "$DEST"
+          if [ "$ok" != "1" ]; then
+            echo "::warning::Android clang 下载失败, 回退到 apt clang-14 (构建继续, 但工具链与原厂不同)"
+            exit 0
+          fi
           "$DEST/bin/clang" --version | head -2
           "$DEST/bin/ld.lld" --version | head -1
           echo "PATH=$DEST/bin:$PATH" >> "$GITHUB_ENV"
-          echo "CLANG_CC=clang" >> "$GITHUB_ENV"
-          echo "CLANG_LD=ld.lld" >> "$GITHUB_ENV"
+          echo "CLANG_CC=$DEST/bin/clang" >> "$GITHUB_ENV"
+          echo "CLANG_LD=$DEST/bin/ld.lld" >> "$GITHUB_ENV"
+          echo "CLANG_TAG=android-r450784e" >> "$GITHUB_ENV"
 
       - name: Prepare .config from 设备真实 w210ds_full.config + 开启虚拟化/跨平台 (基于中兴开源源码)
         run: |
