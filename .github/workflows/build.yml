@@ -78,7 +78,7 @@ jobs:
           # apt 的 Ubuntu clang 是 14.0.0; nVHE hyp(EL2) 代码生成可能对编译器补丁级别敏感
           # googlesource 的 +archive 在本 runner 返回 400, 故改用 GitHub 上的 AOSP prebuilts 镜像
           DEST="$HOME/clang-r450784e"
-          mkdir -p "$DEST"
+          rm -rf "$DEST"; mkdir -p "$DEST"
           ok=0
           for U in \
             "https://codeload.github.com/snove520/clang-r450784e/tar.gz/refs/heads/main" \
@@ -87,7 +87,9 @@ jobs:
             echo "try $U"
             if curl -fL --retry 2 --retry-delay 5 -m 2400 "$U" -o /tmp/clang.tgz; then
               ls -la /tmp/clang.tgz
-              if tar -xzf /tmp/clang.tgz -C "$DEST" --strip-components=1 2>/dev/null; then ok=1; break; fi
+              # 不假设顶层目录结构(有的镜像带 <repo>-<branch>/ 前缀, 有的不带)
+              rm -rf "$DEST"; mkdir -p "$DEST"
+              if tar -xzf /tmp/clang.tgz -C "$DEST" 2>/dev/null; then ok=1; break; fi
               echo "  解包失败, 试下一个"
             fi
           done
@@ -95,16 +97,28 @@ jobs:
             echo "::warning::Android clang 下载失败, 回退到 apt clang-14 (构建继续, 但工具链与原厂不同)"
             exit 0
           fi
+          # 定位 bin 目录（兼容 $DEST/bin 与 $DEST/<name>/bin 两种布局）
+          BD=""
+          for c in "$DEST/bin/clang" "$DEST"/*/bin/clang; do
+            if [ -f "$c" ]; then BD=$(dirname "$c"); break; fi
+          done
+          if [ -z "$BD" ]; then
+            echo "::warning::解包后找不到 clang, 回退 apt"; ls -la "$DEST" | head -20; exit 0
+          fi
+          echo "clang bin dir = $BD"
+          chmod +x "$BD"/* 2>/dev/null || true
+          LIBD=$(dirname "$BD")/lib64
           # AOSP clang 依赖 lib64/libLLVM-14git.so; 不在 rpath 里时必须显式给 LD_LIBRARY_PATH,
           # 否则 clang 一启动就挂 -> kconfig 报 "unknown compiler"。用包装脚本统一注入。
           mkdir -p "$HOME/tc/bin"
           for t in clang clang++ ld.lld llvm-ar llvm-nm llvm-objcopy llvm-objdump llvm-strip llvm-readelf llvm-as llvm-link; do
-            if [ -x "$DEST/bin/$t" ] && [ ! -d "$DEST/bin/$t" ]; then
-              printf '#!/bin/sh\nexport LD_LIBRARY_PATH="%s/lib64:%s/lib:$LD_LIBRARY_PATH"\nexec "%s/bin/%s" "$@"\n' \
-                "$DEST" "$DEST" "$DEST" "$t" > "$HOME/tc/bin/$t"
+            if [ -f "$BD/$t" ]; then
+              printf '#!/bin/sh\nexport LD_LIBRARY_PATH="%s:%s/lib:$LD_LIBRARY_PATH"\nexec "%s/%s" "$@"\n' \
+                "$LIBD" "$(dirname "$BD")" "$BD" "$t" > "$HOME/tc/bin/$t"
               chmod +x "$HOME/tc/bin/$t"
             fi
           done
+          ls -la "$HOME/tc/bin" | head -15
           "$HOME/tc/bin/clang" --version | head -2
           echo "--- kbuild 编译器识别自检 (期望输出 Clang 14 0 7) ---"
           printf '#if defined(__clang__)\nClang __clang_major__ __clang_minor__ __clang_patchlevel__\n#endif\n' \
@@ -114,7 +128,7 @@ jobs:
             echo "::warning::Android clang 自检失败, 回退到 apt clang-14"
             exit 0
           fi
-          echo "PATH=$HOME/tc/bin:$DEST/bin:$PATH" >> "$GITHUB_ENV"
+          echo "PATH=$HOME/tc/bin:$BD:$PATH" >> "$GITHUB_ENV"
           echo "CLANG_CC=$HOME/tc/bin/clang" >> "$GITHUB_ENV"
           echo "CLANG_LD=$HOME/tc/bin/ld.lld" >> "$GITHUB_ENV"
           echo "CLANG_TAG=android-r450784e" >> "$GITHUB_ENV"
