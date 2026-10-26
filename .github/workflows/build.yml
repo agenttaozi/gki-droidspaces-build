@@ -19,6 +19,18 @@ on:
         description: "LTO 模式: thin(默认,省内存) | full(对齐原厂) | none(关闭)"
         required: false
         default: "thin"
+      CLANG:
+        description: "工具链: apt=Ubuntu clang-14.0.0 | android=原厂同款 Android clang r450784e(14.0.7)"
+        required: false
+        default: "apt"
+      MODVERSIONS:
+        description: "on=保持原厂 MODVERSIONS=y(符号CRC校验, ABI 与原厂完全一致) | off=关闭CRC(改结构体后必需)"
+        required: false
+        default: "off"
+      SYSVIPC:
+        description: "on=开 SYSVIPC+001.kABI补丁(IPC_NS 依赖) | off=保持原厂 not set(ABI 完全一致)"
+        required: false
+        default: "on"
 
 jobs:
   build:
@@ -59,6 +71,30 @@ jobs:
           echo "CLANG_CC=clang-14" >> "$GITHUB_ENV"
           echo "CLANG_LD=ld.lld-14" >> "$GITHUB_ENV"
 
+      - name: Toolchain = Android clang r450784e (原厂同款 14.0.7)
+        if: ${{ github.event.inputs.CLANG == 'android' }}
+        run: |
+          set -e
+          # 原厂内核 CC_VERSION_TEXT = "Android (8508608, based on r450784e) clang version 14.0.7"
+          # 我们的 apt clang 是 14.0.0, nVHE hyp(EL2) 代码生成对编译器补丁级别敏感, 故提供原厂同款工具链开关
+          DEST="$HOME/clang-r450784e"
+          mkdir -p "$DEST"
+          ok=0
+          for URL in \
+            "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r450784e.tar.gz" \
+            "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android13-release/clang-r450784e.tar.gz" ; do
+            echo "try $URL"
+            if curl -fL --retry 2 --retry-delay 3 -m 1500 "$URL" -o /tmp/clang-r450784e.tgz; then ok=1; break; fi
+          done
+          if [ "$ok" != "1" ]; then echo "ERROR: 下载 Android clang 失败"; exit 1; fi
+          ls -la /tmp/clang-r450784e.tgz
+          tar -xzf /tmp/clang-r450784e.tgz -C "$DEST"
+          "$DEST/bin/clang" --version | head -2
+          "$DEST/bin/ld.lld" --version | head -1
+          echo "PATH=$DEST/bin:$PATH" >> "$GITHUB_ENV"
+          echo "CLANG_CC=clang" >> "$GITHUB_ENV"
+          echo "CLANG_LD=ld.lld" >> "$GITHUB_ENV"
+
       - name: Prepare .config from 设备真实 w210ds_full.config + 开启虚拟化/跨平台 (基于中兴开源源码)
         run: |
           set -e
@@ -74,8 +110,17 @@ jobs:
           cp ../config/w210ds_full.config .config
           ./scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
           ./scripts/config --disable TRIM_UNUSED_KSYMS
-          # 开 SYSVIPC (IPC_NS 依赖; 原厂 config 里是 not set)
-          ./scripts/config --enable SYSVIPC
+          # 开 SYSVIPC (IPC_NS 依赖; 原厂 config 里是 not set) —— 可用输入 SYSVIPC=off 保持原厂 ABI 完全一致
+          SV="${{ github.event.inputs.SYSVIPC }}"
+          if [ -z "$SV" ]; then SV="on"; fi
+          if [ "$SV" = "on" ]; then
+            ./scripts/config --enable SYSVIPC
+            ./scripts/config --enable SYSVIPC_SYSCTL 2>/dev/null || true
+            echo "SYSVIPC = on (配 001.kABI 补丁, 不改 task_struct 布局)"
+          else
+            ./scripts/config --disable SYSVIPC 2>/dev/null || true
+            echo "SYSVIPC = off (与原厂一致, ABI 完全对齐)"
+          fi
           ./scripts/config --disable DEBUG_INFO
           ./scripts/config --enable LD_IS_LLD
           # === LTO 模式(可切换): 原厂=FULL; 我们曾用 THIN 省内存, 但 B 版实测"纯原厂配置"也无 /dev/kvm,
@@ -90,7 +135,7 @@ jobs:
             none) printf 'CONFIG_LTO_NONE=y\n' >> .config ;;
             *) echo "ERROR: 未知 LTO_MODE=$LTO"; exit 1 ;;
           esac
-          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
+          make LLVM=1 ARCH=arm64 CC="$CLANG_CC" LD="$CLANG_LD" olddefconfig
           echo "--- 实际 LTO 配置 ---"
           grep -E '^CONFIG_(LTO|LTO_CLANG|CFI)' .config || true
           case "$LTO" in
@@ -112,9 +157,13 @@ jobs:
           ./scripts/config --set-str LOCALVERSION ""
           # === SYSVIPC KABI 补丁: 开 IPC_NS 不改 task_struct 布局, 保护原厂 .ko ABI ===
           # 打进 zte-kernel/ 子目录 (--directory), 失败则 patch -p1 兜底, 再不行跳过
-          git apply --directory="$KS" ../patches/001.patch 2>/dev/null || \
-          patch -p1 -d "$KS" < ../patches/001.patch 2>/dev/null || \
-            echo "(001.patch 已含或跳过)"
+          if [ "$SV" = "on" ]; then
+            git apply --directory="$KS" ../patches/001.patch 2>/dev/null || \
+            patch -p1 -d "$KS" < ../patches/001.patch 2>/dev/null || \
+              echo "(001.patch 已含或跳过)"
+          else
+            echo "SYSVIPC=off -> 跳过 001.patch"
+          fi
           # === 应用增量配置清单 (可用 workflow 输入 CONFIG_FILE 切换) ===
           CFG="${{ github.event.inputs.CONFIG_FILE }}"
           if [ -z "$CFG" ]; then CFG="w210ds_virt.config"; fi
@@ -139,18 +188,23 @@ jobs:
           ./scripts/config --disable FUNCTION_TRACER 2>/dev/null || true
           ./scripts/config --disable CIFS 2>/dev/null || true
           ./scripts/config --disable SQUASHFS 2>/dev/null || true
-          # === 关键修复: 关闭 CRC 校验, 但强行保留 vermagic 里的 "modversions" 字样 ===
-          # 新增命名空间等会改变 nsproxy/cred 布局, 原厂 .ko 的 module_layout CRC 对不上;
-          # 关 MODVERSIONS 让内核不再做 CRC 校验, 同时保留 "modversions" 字符串使 vermagic 整串全等。
-          ./scripts/config --disable MODVERSIONS
+          # === MODVERSIONS: on=保持原厂(符号CRC校验, ABI 与出厂内核逐符号一致) | off=关闭CRC并保留 vermagic 字样 ===
+          MV="${{ github.event.inputs.MODVERSIONS }}"
+          if [ -z "$MV" ]; then MV="off"; fi
           ./scripts/config --enable MODULE_UNLOAD
-          sed -i 's|#define MODULE_VERMAGIC_MODVERSIONS ""|#define MODULE_VERMAGIC_MODVERSIONS "modversions "|' include/linux/vermagic.h
-          echo "--- vermagic.h 校验 ---"
-          grep -n "MODULE_VERMAGIC_MODVERSIONS" include/linux/vermagic.h
-          if grep -q 'MODULE_VERMAGIC_MODVERSIONS ""' include/linux/vermagic.h; then
-            echo "ERROR: vermagic.h 改写失败"; exit 1
+          if [ "$MV" = "on" ]; then
+            ./scripts/config --enable MODVERSIONS
+            echo "MODVERSIONS = on (原厂一致; 未改结构体的配置才能加载原厂 .ko)"
+          else
+            ./scripts/config --disable MODVERSIONS
+            sed -i 's|#define MODULE_VERMAGIC_MODVERSIONS ""|#define MODULE_VERMAGIC_MODVERSIONS "modversions "|' include/linux/vermagic.h
+            echo "--- vermagic.h 校验 ---"
+            grep -n "MODULE_VERMAGIC_MODVERSIONS" include/linux/vermagic.h
+            if grep -q 'MODULE_VERMAGIC_MODVERSIONS ""' include/linux/vermagic.h; then
+              echo "ERROR: vermagic.h 改写失败"; exit 1
+            fi
+            echo "vermagic.h patched OK"
           fi
-          echo "vermagic.h patched OK"
           if ./scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
           # 去掉 UTS_RELEASE 尾部 dirty 标记 "+" (双保险)
           git config --global --add safe.directory "$PWD" || true
@@ -159,12 +213,12 @@ jobs:
           git add -A Makefile include/linux/vermagic.h >/dev/null 2>&1 || true
           git -c user.email=buildbot@example.com -c user.name=buildbot commit -q -m "ZTE source: virtualization config + vermagic align" >/dev/null 2>&1 || echo "(no changes to commit)"
           touch .scmversion
-          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 olddefconfig
+          make LLVM=1 ARCH=arm64 CC="$CLANG_CC" LD="$CLANG_LD" olddefconfig
           # === 秒级预检: UTS_RELEASE 必须逐个符号等于原厂真串 ===
-          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 include/config/kernel.release
+          make LLVM=1 ARCH=arm64 CC="$CLANG_CC" LD="$CLANG_LD" include/config/kernel.release
           KR=$(cat include/config/kernel.release 2>/dev/null || true)
           if [ -z "$KR" ]; then
-            KR=$(make -s LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 kernelrelease 2>/dev/null | tail -1 || true)
+            KR=$(make -s LLVM=1 ARCH=arm64 CC="$CLANG_CC" LD="$CLANG_LD" kernelrelease 2>/dev/null | tail -1 || true)
           fi
           TARGET="5.15.178-android13-8-gb370d3baf5b7-ab20251103.222925"
           echo "UTS_RELEASE(preflight) = [$KR]"
@@ -179,8 +233,11 @@ jobs:
             v=$(grep -E "^CONFIG_${k}=" "$KS/.config" | head -1)
             echo "$k -> ${v:-NOT_SET}"
           done
-          if grep -qE '^CONFIG_MODVERSIONS=y' "$KS/.config"; then
+          if [ "$MV" != "on" ] && grep -qE '^CONFIG_MODVERSIONS=y' "$KS/.config"; then
             echo "ERROR: CONFIG_MODVERSIONS 未关闭"; exit 1
+          fi
+          if [ "$MV" = "on" ] && ! grep -qE '^CONFIG_MODVERSIONS=y' "$KS/.config"; then
+            echo "ERROR: 要求 MODVERSIONS=on 但未生效"; exit 1
           fi
           # === ABI 硬保护: 这两项会改变 task_struct / cfs_rq 布局, 原厂预编译 .ko 会踩错偏移直接崩(V10 时代的血泪) ===
           # 关 MODVERSIONS 只能绕过 CRC 校验, 绕不过结构体布局变化, 必须彻底不启用。
@@ -218,7 +275,7 @@ jobs:
           # 清空 usr/include/Makefile 的 extra-y, 使其不再生成 .hdrtest 目标即可跳过(产物 Image 不受影响)。
           sed -i 's/^extra-y := .*/extra-y :=/' usr/include/Makefile
           grep -n '^extra-y' usr/include/Makefile || true
-          make LLVM=1 ARCH=arm64 CC=clang-14 LD=ld.lld-14 CC_ARM32=clang -j"$(nproc)" Image
+          make LLVM=1 ARCH=arm64 CC="$CLANG_CC" LD="$CLANG_LD" CC_ARM32=clang -j"$(nproc)" Image
           ls -la arch/arm64/boot/Image
           echo "=== Image 体积闸门 (出厂内核槽位 47443968 字节) ==="
           # boot_a 槽位之后紧跟 AVB vbmeta+签名(无中兴私钥无法重签), 故内核必须 <= 出厂槽位。
