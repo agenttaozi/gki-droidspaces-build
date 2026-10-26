@@ -155,6 +155,21 @@ jobs:
             fi
             echo "$k -> (correctly not set, ABI-safe)"
           done
+          # === 符号冲突硬保护: PROC_KCORE/KEXEC 会 select CRASH_CORE -> 内核 EXPORT_SYMBOL(paddr_vmcoreinfo_note),
+          #     与展锐 sysdump.ko 的同名导出冲突 -> "sysdump: exports duplicate symbol paddr_vmcoreinfo_note (owned by kernel)"
+          #     -> sysdump.ko insmod 返回 Exec format error -> init 加载模块整体失败 -> Kernel panic(Attempted to kill init)
+          #     实机日志已证实(run 40286626874 产物)：必须保持 CRASH_CORE / KEXEC_CORE = not set。
+          for k in CRASH_CORE KEXEC_CORE; do
+            if grep -qE "^CONFIG_${k}=y" "$KS/.config"; then
+              echo "ERROR: CONFIG_${k}=y 会让内核导出 paddr_vmcoreinfo_note, 与展锐 sysdump.ko 冲突 -> 模块加载失败 -> panic"; exit 1
+            fi
+            echo "$k -> (correctly not set, sysdump.ko safe)"
+          done
+          # PROC_KCORE 是 CRASH_CORE 的唯一来源(本 config 未开 KEXEC), 单独再确认一次
+          if grep -qE "^CONFIG_PROC_KCORE=y" "$KS/.config"; then
+            echo "ERROR: CONFIG_PROC_KCORE=y -> select CRASH_CORE -> 符号冲突, 必须关闭"; exit 1
+          fi
+          echo "PROC_KCORE -> (correctly not set)"
 
       - name: Build uncompressed Image (clang-14, 中兴开源树)
         run: |
