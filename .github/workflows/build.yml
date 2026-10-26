@@ -11,6 +11,10 @@ on:
         description: "中兴开源内核树目录 (仓库内自带, 已推入 zte-kernel/)"
         required: false
         default: "zte-kernel"
+      CONFIG_FILE:
+        description: "增量配置文件名(config/ 下): w210ds_virt.config=全功能(诊断) | w210ds_v10parity.config=V10全等保底"
+        required: false
+        default: "w210ds_virt.config"
 
 jobs:
   build:
@@ -86,11 +90,15 @@ jobs:
           git apply --directory="$KS" ../patches/001.patch 2>/dev/null || \
           patch -p1 -d "$KS" < ../patches/001.patch 2>/dev/null || \
             echo "(001.patch 已含或跳过)"
-          # === 应用 V10 + 虚拟化/跨平台 全开清单 (w210ds_virt.config) ===
-          echo "--- 应用 w210ds_virt.config ($(grep -cE '^CONFIG_[A-Z0-9_]+=y' ../config/w210ds_virt.config) 项) ---"
-          grep -E '^CONFIG_[A-Z0-9_]+=y' ../config/w210ds_virt.config | sed -E 's/^CONFIG_//; s/=y$//' | while read -r s; do
+          # === 应用增量配置清单 (可用 workflow 输入 CONFIG_FILE 切换) ===
+          CFG="${{ github.event.inputs.CONFIG_FILE }}"
+          if [ -z "$CFG" ]; then CFG="w210ds_virt.config"; fi
+          echo "--- 应用 $CFG ($(grep -cE '^CONFIG_[A-Z0-9_]+=y' ../config/$CFG) 项) ---"
+          grep -E '^CONFIG_[A-Z0-9_]+=y' ../config/$CFG | sed -E 's/^CONFIG_//; s/=y$//' | while read -r s; do
             ./scripts/config --enable "$s" 2>/dev/null || true
           done
+          # 挂死检测超时压到 60s(诊断需要快速触发 panic 拿栈; 无副作用)
+          ./scripts/config --set-val DEFAULT_HUNG_TASK_TIMEOUT 60 2>/dev/null || true
           # 关闭 BTF: CI runner 无 pahole, 强制开会导致构建失败 (BTF 非必需)
           ./scripts/config --disable DEBUG_INFO_BTF 2>/dev/null || true
           # === 体积收紧: 把 Image 压回出厂槽位 ===
