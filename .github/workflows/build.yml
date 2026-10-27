@@ -170,6 +170,16 @@ jobs:
           tar -xzf "$KSU_PKG" -C ../KSU-src
           if [ -f ../KSU-src/kernel/Kbuild ] && [ -n "$(find ../KSU-src/kernel -name '*.c' | head -1)" ]; then
             cp -r ../KSU-src/kernel drivers/kernelsu
+            # 官方 KernelSU 的 KSU_VERSION 来自 `git rev-list --count`, 离线源码包没有 .git 时会退回 16,
+            # 管理器会判定"内核版本过低/未安装"。这里显式写成发布包的 build 号(与
+            # KernelSU_v3.3.1_32680-release.apk 的 versionCode 一致), 保证内核与管理器匹配。
+            if [ "$IMPL" = "kernelsu" ]; then
+              sed -i 's/-DKSU_VERSION=16/-DKSU_VERSION=32680/' drivers/kernelsu/Kbuild
+              if ! grep -q 'KSU_VERSION=32680' drivers/kernelsu/Kbuild; then
+                echo "ERROR: KSU_VERSION 注入失败(官方KernelSU 版本号改动)"; exit 1
+              fi
+              echo "KSU_VERSION 已固定为 32680 (对应 v3.3.1 管理器)"
+            fi
             grep -q 'kernelsu' drivers/Makefile || echo 'obj-$(CONFIG_KSU) += kernelsu/' >> drivers/Makefile
             grep -q 'drivers/kernelsu/Kconfig' drivers/Kconfig || \
               sed -i '/^endmenu/i source "drivers/kernelsu/Kconfig"' drivers/Kconfig
