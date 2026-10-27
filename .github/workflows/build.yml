@@ -148,29 +148,27 @@ jobs:
           # chmod 改了海量文件模式位, 让 git 忽略模式差异, 否则 setlocalversion 会判定脏树并追加 -dirty,
           # 使 UTS_RELEASE 偏离目标串、preflight 失败。
           git config core.filemode false 2>/dev/null || true
-          # === KernelSU 内建集成 (kprobe 方式, 不需要手改内核源码) ===
+          # === KernelSU 内建集成 (SukiSU-Ultra v4.1.2, kprobe 方式) ===
           # 设备上的管理器是 SukiSU Ultra (com.sukisu.ultra v4.1.2), root 原本来自 init_boot ramdisk 里的
           # kernelsu.ko(声明 vermagic=5.15.194 + 需要 34 个我们树里没有的导出符号), 在自编译内核上装不进去。
-          # 因此改为把 SukiSU 的内核侧源码直接编进内核 (CONFIG_KSU=y): root 内建, 且与已装的管理器协议一致。
-          # 注意必须用 SukiSU-Ultra 而不是官方 KernelSU —— 两者 supercall 协议不同, 用官方的话 ksud 起不来、su 不存在。
-          KSU_REPO=https://github.com/SukiSU-Ultra/SukiSU-Ultra.git
-          KSU_TAG="${{ github.event.inputs.KSU_TAG }}"
-          if [ -z "$KSU_TAG" ]; then KSU_TAG="v4.1.2"; fi
-          rm -rf ../KSU-src
-          git clone --depth 1 --branch "$KSU_TAG" "$KSU_REPO" ../KSU-src 2>/dev/null || \
-            git clone --depth 1 "$KSU_REPO" ../KSU-src
-          if [ -d ../KSU-src/kernel/core ]; then
-            rm -rf drivers/kernelsu
+          # 因此把 SukiSU 内核侧源码直接编进内核(CONFIG_KSU=y): root 内建, 且与已装管理器 supercall 协议一致。
+          # 必须用 SukiSU-Ultra 而非官方 KernelSU —— 两者协议不同, 用官方的话 ksud 起不来、su 不存在。
+          #
+          # 源码随仓库携带(sukisu/sukisu-v4.1.2-kernel.tar.gz), 不再 git clone:
+          #   ① CI 里 clone 不稳(代理/重试会留下半成品目录, 导致"目录已存在"失败);
+          #   ② v4.1.2 是【扁平布局】—— 头文件(app_profile.h/ksu.h/...)全在 kernel/ 下,
+          #      既没有 kernel/core 也没有顶层 uapi/, 按新版布局写的判断会误判成"拉取失败"(A3 就是这么挂的)。
+          rm -rf drivers/kernelsu ../KSU-src
+          mkdir -p ../KSU-src
+          tar -xzf ../sukisu/sukisu-v4.1.2-kernel.tar.gz -C ../KSU-src
+          if [ -f ../KSU-src/kernel/Kbuild ] && [ -f ../KSU-src/kernel/ksu.c ]; then
             cp -r ../KSU-src/kernel drivers/kernelsu
-            # kernel/include/uapi 在仓库里是指向根 uapi/ 的符号链接; cp 后成悬空链接 -> 用真实目录替换
-            rm -rf drivers/kernelsu/include/uapi
-            cp -r ../KSU-src/uapi drivers/kernelsu/include/uapi
             grep -q 'kernelsu' drivers/Makefile || echo 'obj-$(CONFIG_KSU) += kernelsu/' >> drivers/Makefile
             grep -q 'drivers/kernelsu/Kconfig' drivers/Kconfig || \
               sed -i '/^endmenu/i source "drivers/kernelsu/Kconfig"' drivers/Kconfig
-            echo "SukiSU 源码已集成 ($(ls drivers/kernelsu | wc -l) 项); uapi 头 $(ls drivers/kernelsu/include/uapi | wc -l) 个"
+            echo "KSU 源码已集成(v4.1.2 内置包, $(find drivers/kernelsu -type f | wc -l) 个文件)"
           else
-            echo "ERROR: SukiSU 拉取失败, 无法内建 root"; exit 1
+            echo "ERROR: 内置 KSU 源码解包失败(sukisu/sukisu-v4.1.2-kernel.tar.gz)"; exit 1
           fi
           # 用【完整原厂 .config】作基底 (含全部 Unisoc 驱动选项, 确保模块_layout 与原厂内核一致)
           cp ../config/w210ds_full.config .config
