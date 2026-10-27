@@ -213,6 +213,14 @@ jobs:
             echo "ERROR: 002.patch 未生效, 构建出的内核会被 kvm-arm.mode=none 关掉 KVM"; exit 1
           fi
           echo "002.patch OK -> kvm 将忽略 bootloader 的 kvm-arm.mode=none"
+          # === 003: MODVERSIONS=n 时放宽 vermagic 比较 ===
+          # 本机 ROM 的 kernelsu.ko 在 vendor_boot initramfs 里, 是为原厂内核(00012-g4ea0fcb5d130)编的;
+          # 我们内核 vermagic 是 gb370d3baf5b7, MODVERSIONS=n 时上游做整串比较 -> 模块被拒 -> 没有 root
+          patch -p1 < ../patches/003.module-relax-vermagic.patch || echo "(003.patch 可能已应用)"
+          if ! grep -q 'wb: vermagic version ignored' kernel/module.c; then
+            echo "ERROR: 003.patch 未生效"; exit 1
+          fi
+          echo "003.patch OK -> 放宽 vermagic 比较, 原厂 kernelsu.ko 可加载"
           # === 应用增量配置清单 (可用 workflow 输入 CONFIG_FILE 切换) ===
           CFG="${{ github.event.inputs.CONFIG_FILE }}"
           if [ -z "$CFG" ]; then CFG="w210ds_virt.config"; fi
