@@ -31,10 +31,10 @@ on:
         description: "on=开 SYSVIPC+001.kABI补丁(IPC_NS 依赖) | off=保持原厂 not set(ABI 完全一致)"
         required: false
         default: "on"
-      KSU_TAG:
-        description: "SukiSU-Ultra 版本标签(需与设备管理器版本一致): 默认 v4.1.2"
+      KSU_IMPL:
+        description: "内建 root 实现: sukisu(SukiSU-Ultra v4.1.2, 配 com.sukisu.ultra 管理器) | kernelsu(官方 KernelSU v3.3.1, 配 me.weishu.kernelsu 管理器)"
         required: false
-        default: "v4.1.2"
+        default: "sukisu"
 
 jobs:
   build:
@@ -154,21 +154,28 @@ jobs:
           # 因此把 SukiSU 内核侧源码直接编进内核(CONFIG_KSU=y): root 内建, 且与已装管理器 supercall 协议一致。
           # 必须用 SukiSU-Ultra 而非官方 KernelSU —— 两者协议不同, 用官方的话 ksud 起不来、su 不存在。
           #
-          # 源码随仓库携带(sukisu/sukisu-v4.1.2-kernel.tar.gz), 不再 git clone:
-          #   ① CI 里 clone 不稳(代理/重试会留下半成品目录, 导致"目录已存在"失败);
-          #   ② v4.1.2 是【扁平布局】—— 头文件(app_profile.h/ksu.h/...)全在 kernel/ 下,
-          #      既没有 kernel/core 也没有顶层 uapi/, 按新版布局写的判断会误判成"拉取失败"(A3 就是这么挂的)。
+          # 源码随仓库携带, 不再 git clone(CI 里 clone 不稳, --branch 失败会留半成品目录导致二次失败)。
+          # 两套实现任选(输入 KSU_IMPL), 必须与设备上装的管理器同源, 否则 ksud 起不来、su 不存在:
+          #   sukisu   -> SukiSU-Ultra v4.1.2 (扁平布局: 头文件全在 kernel/ 下, 无 core/ 无 uapi/)
+          #   kernelsu -> 官方 KernelSU v3.3.1 (新布局: kernel/core,hook,include/uapi; uapi 头已补齐)
+          IMPL="${{ github.event.inputs.KSU_IMPL }}"
+          if [ -z "$IMPL" ]; then IMPL="sukisu"; fi
+          case "$IMPL" in
+            kernelsu) KSU_PKG=../sukisu/kernelsu-v3.3.1-kernel.tar.gz ;;
+            *)        KSU_PKG=../sukisu/sukisu-v4.1.2-kernel.tar.gz ;;
+          esac
+          echo "KSU 实现 = $IMPL ($KSU_PKG)"
           rm -rf drivers/kernelsu ../KSU-src
           mkdir -p ../KSU-src
-          tar -xzf ../sukisu/sukisu-v4.1.2-kernel.tar.gz -C ../KSU-src
-          if [ -f ../KSU-src/kernel/Kbuild ] && [ -f ../KSU-src/kernel/ksu.c ]; then
+          tar -xzf "$KSU_PKG" -C ../KSU-src
+          if [ -f ../KSU-src/kernel/Kbuild ] && [ -n "$(find ../KSU-src/kernel -name '*.c' | head -1)" ]; then
             cp -r ../KSU-src/kernel drivers/kernelsu
             grep -q 'kernelsu' drivers/Makefile || echo 'obj-$(CONFIG_KSU) += kernelsu/' >> drivers/Makefile
             grep -q 'drivers/kernelsu/Kconfig' drivers/Kconfig || \
               sed -i '/^endmenu/i source "drivers/kernelsu/Kconfig"' drivers/Kconfig
-            echo "KSU 源码已集成(v4.1.2 内置包, $(find drivers/kernelsu -type f | wc -l) 个文件)"
+            echo "KSU 源码已集成($IMPL, $(find drivers/kernelsu -type f | wc -l) 个文件)"
           else
-            echo "ERROR: 内置 KSU 源码解包失败(sukisu/sukisu-v4.1.2-kernel.tar.gz)"; exit 1
+            echo "ERROR: 内置 KSU 源码解包失败($KSU_PKG)"; exit 1
           fi
           # 用【完整原厂 .config】作基底 (含全部 Unisoc 驱动选项, 确保模块_layout 与原厂内核一致)
           cp ../config/w210ds_full.config .config
