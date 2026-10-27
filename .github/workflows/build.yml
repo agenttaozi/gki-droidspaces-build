@@ -155,30 +155,42 @@ jobs:
           # 必须用 SukiSU-Ultra 而非官方 KernelSU —— 两者协议不同, 用官方的话 ksud 起不来、su 不存在。
           #
           # 源码随仓库携带, 不再 git clone(CI 里 clone 不稳, --branch 失败会留半成品目录导致二次失败)。
-          # 两套实现任选(输入 KSU_IMPL), 必须与设备上装的管理器同源, 否则 ksud 起不来、su 不存在:
-          #   sukisu   -> SukiSU-Ultra v4.1.2 (扁平布局: 头文件全在 kernel/ 下, 无 core/ 无 uapi/)
-          #   kernelsu -> 官方 KernelSU v3.3.1 (新布局: kernel/core,hook,include/uapi; uapi 头已补齐)
+          # 实现任选(输入 KSU_IMPL), 必须与设备上装的管理器同源, 否则 ksud 起不来、su 不存在:
+          #   sukisu   -> SukiSU-Ultra v4.1.2 (扁平布局, 走 prctl 通道)
+          #   kernelsu -> 官方 KernelSU v3.3.1 (新布局 core/include/uapi, 走 reboot syscall 通道)
+          #   ksu105   -> 官方 KernelSU v1.0.5 (扁平布局, 走 prctl 通道, 内置 ksud)
+          #
+          # ★ 为什么需要 ksu105: 中兴 ROM 把 reboot syscall 在 app 域设成 SECCOMP_RET_TRAP,
+          #   官方 3.x 用它取驱动 fd -> 管理器一调用就被 SIGSYS 杀掉(实测 "driver install syscall
+          #   was blocked by seccomp"), 永远拿不到 root。v1.0.5 是最后一代走 prctl 的官方版本,
+          #   prctl 未被拦截, 因此可以在本 ROM 上工作。
           IMPL="${{ github.event.inputs.KSU_IMPL }}"
           if [ -z "$IMPL" ]; then IMPL="sukisu"; fi
+          KSU_VER=""
           case "$IMPL" in
-            kernelsu) KSU_PKG=../sukisu/kernelsu-v3.3.1-kernel.tar.gz ;;
+            kernelsu) KSU_PKG=../sukisu/kernelsu-v3.3.1-kernel.tar.gz; KSU_VER=32680 ;;
+            ksu105)   KSU_PKG=../sukisu/kernelsu-v1.0.5-kernel.tar.gz; KSU_VER=12081 ;;
             *)        KSU_PKG=../sukisu/sukisu-v4.1.2-kernel.tar.gz ;;
           esac
-          echo "KSU 实现 = $IMPL ($KSU_PKG)"
+          echo "KSU 实现 = $IMPL ($KSU_PKG) 版本号=${KSU_VER:-由源码自算}"
           rm -rf drivers/kernelsu ../KSU-src
           mkdir -p ../KSU-src
           tar -xzf "$KSU_PKG" -C ../KSU-src
-          if [ -f ../KSU-src/kernel/Kbuild ] && [ -n "$(find ../KSU-src/kernel -name '*.c' | head -1)" ]; then
+          if [ -f ../KSU-src/kernel/Kbuild -o -f ../KSU-src/kernel/Makefile ] && [ -n "$(find ../KSU-src/kernel -name '*.c' | head -1)" ]; then
             cp -r ../KSU-src/kernel drivers/kernelsu
             # 官方 KernelSU 的 KSU_VERSION 来自 `git rev-list --count`, 离线源码包没有 .git 时会退回 16,
-            # 管理器会判定"内核版本过低/未安装"。这里显式写成发布包的 build 号(与
-            # KernelSU_v3.3.1_32680-release.apk 的 versionCode 一致), 保证内核与管理器匹配。
-            if [ "$IMPL" = "kernelsu" ]; then
-              sed -i 's/-DKSU_VERSION=16/-DKSU_VERSION=32680/' drivers/kernelsu/Kbuild
-              if ! grep -q 'KSU_VERSION=32680' drivers/kernelsu/Kbuild; then
-                echo "ERROR: KSU_VERSION 注入失败(官方KernelSU 版本号改动)"; exit 1
+            # 管理器会判定"内核版本过低/未安装"。显式写成发布包的 build 号:
+            #   v3.3.1 -> 32680 (KernelSU_v3.3.1_32680-release.apk)
+            #   v1.0.5 -> 12081 (KernelSU_v1.0.5_12081-release.apk)
+            if [ -n "$KSU_VER" ]; then
+              # 3.x 用 Kbuild, 1.0.x 用 Makefile
+              for f in drivers/kernelsu/Kbuild drivers/kernelsu/Makefile; do
+                [ -f "$f" ] && sed -i "s/-DKSU_VERSION=16/-DKSU_VERSION=$KSU_VER/" "$f"
+              done
+              if ! grep -rq "KSU_VERSION=$KSU_VER" drivers/kernelsu/Kbuild drivers/kernelsu/Makefile 2>/dev/null; then
+                echo "ERROR: KSU_VERSION 注入失败(上游写法改动)"; exit 1
               fi
-              echo "KSU_VERSION 已固定为 32680 (对应 v3.3.1 管理器)"
+              echo "KSU_VERSION 已固定为 $KSU_VER (对应 $IMPL 的官方管理器)"
             fi
             grep -q 'kernelsu' drivers/Makefile || echo 'obj-$(CONFIG_KSU) += kernelsu/' >> drivers/Makefile
             grep -q 'drivers/kernelsu/Kconfig' drivers/Kconfig || \
