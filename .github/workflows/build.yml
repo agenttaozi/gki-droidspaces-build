@@ -144,6 +144,22 @@ jobs:
           # chmod 改了海量文件模式位, 让 git 忽略模式差异, 否则 setlocalversion 会判定脏树并追加 -dirty,
           # 使 UTS_RELEASE 偏离目标串、preflight 失败。
           git config core.filemode false 2>/dev/null || true
+          # === KernelSU 内建集成 (kprobe 方式, 不需要手改内核源码) ===
+          # 设备上的 root 来自 SukiSU 的 kernelsu.ko(在 init_boot ramdisk 里), 它 modinfo 声明
+          # vermagic=5.15.194 + import_ns=VFS_internal..., 且需要 34 个我们树里没导出的符号
+          # (avtab_search_node/selinux_state/mntns_operations/...), 所以那个模块在我们内核上装不进去。
+          # 做法: 把 KernelSU 的 kernel/ 编进内核(CONFIG_KSU=y), root 直接内建, 不再依赖那个模块。
+          git clone --depth 1 https://github.com/tiann/KernelSU.git ../KernelSU-src 2>/dev/null || true
+          if [ -d ../KernelSU-src/kernel/core ]; then
+            rm -rf drivers/kernelsu
+            cp -r ../KernelSU-src/kernel drivers/kernelsu
+            grep -q 'kernelsu' drivers/Makefile || echo 'obj-$(CONFIG_KSU) += kernelsu/' >> drivers/Makefile
+            grep -q 'drivers/kernelsu/Kconfig' drivers/Kconfig || \
+              sed -i '/^endmenu/i source "drivers/kernelsu/Kconfig"' drivers/Kconfig
+            echo "KSU 源码已集成 ($(ls drivers/kernelsu | wc -l) 项); Makefile/Kconfig 已挂钩"
+          else
+            echo "ERROR: KernelSU 拉取失败, 无法内建 root"; exit 1
+          fi
           # 用【完整原厂 .config】作基底 (含全部 Unisoc 驱动选项, 确保模块_layout 与原厂内核一致)
           cp ../config/w210ds_full.config .config
           ./scripts/config --set-str UNUSED_KSYMS_WHITELIST ""
@@ -262,7 +278,12 @@ jobs:
             fi
             echo "vermagic.h patched OK"
           fi
-          if ./scripts/config --enable KSU 2>/dev/null; then echo "KSU enabled"; else echo "KSU symbol not present (ok)"; fi
+          # KernelSU 内建: Kconfig 已在步骤开头挂进 drivers/Kconfig, 这里打开 CONFIG_KSU=y
+          ./scripts/config --enable KSU 2>/dev/null || echo "WARN: KSU 符号未找到"
+          ./scripts/config --enable KSU_DEBUG 2>/dev/null || true
+          sed -i 's/^# CONFIG_KSU is not set/CONFIG_KSU=y/' .config 2>/dev/null || true
+          grep -q '^CONFIG_KSU=y' .config || sed -i 's/^CONFIG_KSU=m/CONFIG_KSU=y/' .config 2>/dev/null || true
+          echo "KSU 配置: $(grep -E '^CONFIG_KSU' .config | tr '\n' ' ')"
           # 去掉 UTS_RELEASE 尾部 dirty 标记 "+" (双保险)
           git config --global --add safe.directory "$PWD" || true
           git config user.email buildbot@example.com || true
@@ -284,6 +305,10 @@ jobs:
             echo "ERROR: UTS_RELEASE 不等于目标串 (多余 '+' 或 '-g<sha>' 会让原厂 .ko 拒绝加载)"; exit 1
           fi
           echo "UTS_RELEASE preflight OK"
+          if ! grep -q '^CONFIG_KSU=y' .config; then
+            echo "ERROR: CONFIG_KSU 未生效(KernelSU 依赖 KPROBES+EXT4_FS, 检查 Kconfig 是否挂钩成功)"; exit 1
+          fi
+          echo "CONFIG_KSU=y OK -> root 内建"
           cd ..
           echo "=== 校验关键配置 ==="
           for k in PID_NS IPC_NS SYSVIPC USER_NS CGROUP_PIDS CFS_BANDWIDTH DEVTMPFS MACVLAN IP6_NF_NAT IKCONFIG KSU LOCALVERSION LOCALVERSION_AUTO LTO_CLANG_THIN MODVERSIONS MODULE_UNLOAD SMP PREEMPT KVM KVM_ARM64 VIRTIO VHOST OVERLAY_FS BRIDGE VETH SECCOMP BPF_SYSCALL; do
