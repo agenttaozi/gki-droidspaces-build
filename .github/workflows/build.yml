@@ -153,10 +153,13 @@ jobs:
           if [ -d ../KernelSU-src/kernel/core ]; then
             rm -rf drivers/kernelsu
             cp -r ../KernelSU-src/kernel drivers/kernelsu
+            # kernel/include/uapi 在仓库里是指向根 uapi/ 的符号链接; cp 后成悬空链接 -> 用真实目录替换
+            rm -rf drivers/kernelsu/include/uapi
+            cp -r ../KernelSU-src/uapi drivers/kernelsu/include/uapi
             grep -q 'kernelsu' drivers/Makefile || echo 'obj-$(CONFIG_KSU) += kernelsu/' >> drivers/Makefile
             grep -q 'drivers/kernelsu/Kconfig' drivers/Kconfig || \
               sed -i '/^endmenu/i source "drivers/kernelsu/Kconfig"' drivers/Kconfig
-            echo "KSU 源码已集成 ($(ls drivers/kernelsu | wc -l) 项); Makefile/Kconfig 已挂钩"
+            echo "KSU 源码已集成 ($(ls drivers/kernelsu | wc -l) 项); uapi 头 $(ls drivers/kernelsu/include/uapi | wc -l) 个"
           else
             echo "ERROR: KernelSU 拉取失败, 无法内建 root"; exit 1
           fi
